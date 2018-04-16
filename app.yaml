@@ -1,7 +1,15 @@
-#application: 
 runtime: go
 api_version: go1
 
 handlers:
 - url: /.*
   script: _go_app
+
+skip_files:
+- .git
+- .DS_Store
+- .envrc
+- app.prod.yaml
+- check
+
+env_variables:
