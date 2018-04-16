@@ -8,6 +8,7 @@ handlers:
 skip_files:
 - .git
 - .DS_Store
+- .env
 - .envrc
 - app.prod.yaml
 - check
