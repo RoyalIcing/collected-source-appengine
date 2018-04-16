@@ -1,14 +1,14 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
-	// "fmt"
-	"crypto/rand"
 	baseLog "log"
 	"net/http"
 	"os"
+	"time"
 
 	// "cloud.google.com/go/datastore"
 	"github.com/google/go-github/github"
@@ -103,13 +103,9 @@ func createUserCredentialHandle(w http.ResponseWriter, r *http.Request) {
 
 func getSessionManager(ctx context.Context) session.Manager {
 	return session.NewCookieManagerOptions(session.NewMemcacheStore(ctx), &session.CookieMngrOptions{
-		AllowHTTP: appengine.IsDevAppServer(),
+		CookieMaxAge: time.Hour * time.Duration(24*30*6), // 6 months
+		AllowHTTP:    appengine.IsDevAppServer(),
 	})
-}
-
-func gitHubOAuthStartHandle2(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-	log.Debugf(ctx, "gitHubOAuthStartHandle2()")
 }
 
 func gitHubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
@@ -255,6 +251,9 @@ func main() {
 
 	r.Path("/github/repos").Methods("GET").
 		HandlerFunc(githubListReposHandle)
+
+	r.Path("/_sessions/purge").Methods("GET").
+		HandlerFunc(session.PurgeExpiredSessFromDSFunc(""))
 
 	http.Handle("/", r)
 

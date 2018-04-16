@@ -1,0 +1,4 @@
+cron:
+- description: Check and remove expired sessions.
+  url: /_sessions/purge
+  schedule: every 30 minutes synchronized
