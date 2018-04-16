@@ -109,13 +109,10 @@ func getSessionManager(ctx context.Context) session.Manager {
 }
 
 func gitHubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
-	baseLog.Print("gitHubOAuthStartHandle()")
 	ctx := appengine.NewContext(r)
-	log.Debugf(ctx, "gitHubOAuthStartHandle()")
 
 	stateBytes := make([]byte, 16)
 	_, err := rand.Read(stateBytes)
-	log.Debugf(ctx, "Generated random state")
 	if err != nil {
 		log.Errorf(ctx, "Could not generate random state")
 		writeErrorJSON(w, err)
@@ -129,7 +126,6 @@ func gitHubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
 
 	sess := sessmgr.Get(r)
 	if sess != nil {
-		log.Debugf(ctx, "Set state on existing session")
 		sess.SetAttr(gitHubStateKey, state)
 	} else {
 		sess = session.NewSessionOptions(&session.SessOptions{
@@ -140,7 +136,6 @@ func gitHubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := oauthCfg.AuthCodeURL(state)
-	log.Debugf(ctx, "Redirecting to GitHub: %v", url)
 	http.Redirect(w, r, url, 302)
 }
 
