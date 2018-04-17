@@ -22,21 +22,21 @@ const (
 )
 
 var (
-	oauthCfg *oauth2.Config
-	scopes   = []string{"user", "repo"}
+	githubOauthCfg *oauth2.Config
+	githubScopes   = []string{"user", "repo"}
 )
 
 func init() {
-	oauthCfg = &oauth2.Config{
+	githubOauthCfg = &oauth2.Config{
 		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		Endpoint:     oauthGitHub.Endpoint,
 		RedirectURL:  os.Getenv("GITHUB_REDIRECT_URL"),
-		Scopes:       scopes,
+		Scopes:       githubScopes,
 	}
 }
 
-func gitHubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
+func githubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	stateBytes := make([]byte, 16)
@@ -63,7 +63,7 @@ func gitHubOAuthStartHandle(w http.ResponseWriter, r *http.Request) {
 		sessmgr.Add(sess, w)
 	}
 
-	url := oauthCfg.AuthCodeURL(state)
+	url := githubOauthCfg.AuthCodeURL(state)
 	http.Redirect(w, r, url, 302)
 }
 
@@ -87,7 +87,7 @@ func githubOAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code := r.URL.Query().Get("code")
-	token, err := oauthCfg.Exchange(ctx, code)
+	token, err := githubOauthCfg.Exchange(ctx, code)
 	if err != nil {
 		http.Error(w, "Could not get GitHub token. Please try again.", http.StatusBadRequest)
 		return
@@ -121,7 +121,7 @@ func githubListReposHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := github.NewClient(oauthCfg.Client(ctx, &token))
+	client := github.NewClient(githubOauthCfg.Client(ctx, &token))
 
 	user, _, err := client.Users.Get(ctx, "")
 	if err != nil {
@@ -141,7 +141,7 @@ func githubListReposHandle(w http.ResponseWriter, r *http.Request) {
 // AddGitHubRoutes adds routes for signing in and reading from GitHub
 func AddGitHubRoutes(r *mux.Router) {
 	r.Path("/signin/github").Methods("GET").
-		HandlerFunc(gitHubOAuthStartHandle)
+		HandlerFunc(githubOAuthStartHandle)
 
 	r.Path("/signin/github/callback").Methods("GET").
 		HandlerFunc(githubOAuthCallbackHandle)

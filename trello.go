@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	scope                 = "read,write"
+	trelloScope           = "read,write"
 	trelloRequestTokenKey = "trelloRequestToken"
 	trelloAccessTokenKey  = "trelloAccessToken"
 )
@@ -40,12 +40,12 @@ func makeConsumer(ctx context.Context) *oauth.Consumer {
 
 	consumer.AdditionalAuthorizationUrlParams["name"] = os.Getenv("TRELLO_APP_NAME")
 	consumer.AdditionalAuthorizationUrlParams["expiration"] = "never"
-	consumer.AdditionalAuthorizationUrlParams["scope"] = scope
+	consumer.AdditionalAuthorizationUrlParams["scope"] = trelloScope
 
 	return consumer
 }
 
-func oAuthStartHandle(w http.ResponseWriter, r *http.Request) {
+func trelloOauthStartHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	consumer := makeConsumer(ctx)
@@ -73,7 +73,7 @@ func oAuthStartHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, 302)
 }
 
-func oAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
+func trelloOauthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	sessmgr := GetSessionManager(ctx)
@@ -188,10 +188,10 @@ func readProfileHandle(ctx context.Context, w http.ResponseWriter, r *http.Reque
 // AddTrelloRoutes adds routes for signing in and reading from GitHub
 func AddTrelloRoutes(r *mux.Router) {
 	r.Path("/signin/trello").Methods("GET").
-		HandlerFunc(oAuthStartHandle)
+		HandlerFunc(trelloOauthStartHandle)
 
 	r.Path("/signin/trello/callback").Methods("GET").
-		HandlerFunc(oAuthCallbackHandle)
+		HandlerFunc(trelloOauthCallbackHandle)
 
 	r.Path("/trello/profile").Methods("GET").
 		HandlerFunc(WithSessionMgr(readProfileHandle))
