@@ -7,11 +7,16 @@ import (
 	"google.golang.org/appengine"
 )
 
-func init() {
+var _ = loadEnvIfNeeded()
+
+func loadEnvIfNeeded() (err error) {
 	if appengine.IsDevAppServer() {
 		err := godotenv.Load()
 		if err != nil {
 			baseLog.Fatal("Error loading .env file")
 		}
+		return err
 	}
+
+	return nil
 }
