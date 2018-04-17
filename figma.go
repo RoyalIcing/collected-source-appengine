@@ -27,8 +27,8 @@ var (
 )
 
 func init() {
-	clientID := os.Getenv("FIGMA_API_KEY")
-	clientSecret := os.Getenv("FIGMA_API_SECRET")
+	clientID := os.Getenv("FIGMA_CLIENT_ID")
+	clientSecret := os.Getenv("FIGMA_CLIENT_SECRET")
 
 	tokenURLQuery := url.Values{}
 	tokenURLQuery.Set("client_id", clientID)
