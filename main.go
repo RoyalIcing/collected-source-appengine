@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	baseLog "log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/icza/session"
@@ -88,14 +87,6 @@ func createUserCredentialHandle(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetSessionManager allows storing data within a session
-func GetSessionManager(ctx context.Context) session.Manager {
-	return session.NewCookieManagerOptions(session.NewMemcacheStore(ctx), &session.CookieMngrOptions{
-		CookieMaxAge: time.Hour * time.Duration(24*30*6), // 6 months
-		AllowHTTP:    appengine.IsDevAppServer(),
-	})
-}
-
 func init() {
 	gob.Register(oauth2.Token{})
 }
@@ -117,6 +108,7 @@ func main() {
 		HandlerFunc(createUserCredentialHandle)
 
 	AddGitHubRoutes(r)
+	AddTrelloRoutes(r)
 
 	r.Path("/_sessions/purge").Methods("GET").
 		HandlerFunc(session.PurgeExpiredSessFromDSFunc(""))

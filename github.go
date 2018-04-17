@@ -16,11 +16,14 @@ import (
 	"google.golang.org/appengine/log"
 )
 
+const (
+	gitHubStateKey = "gitHubState"
+	gitHubTokenKey = "gitHubToken"
+)
+
 var (
 	oauthCfg *oauth2.Config
-
-	gitHubScopes   = []string{"user", "repo"}
-	gitHubStateKey = "gitHubState"
+	scopes   = []string{"user", "repo"}
 )
 
 func init() {
@@ -29,7 +32,7 @@ func init() {
 		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		Endpoint:     oauthGitHub.Endpoint,
 		RedirectURL:  os.Getenv("GITHUB_REDIRECT_URL"),
-		Scopes:       gitHubScopes,
+		Scopes:       scopes,
 	}
 }
 
@@ -95,7 +98,7 @@ func githubOAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess.SetAttr("gitHubToken", token)
+	sess.SetAttr(gitHubTokenKey, token)
 
 	w.Write([]byte("Success!"))
 }
@@ -112,9 +115,9 @@ func githubListReposHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, ok := sess.Attr("gitHubToken").(oauth2.Token)
+	token, ok := sess.Attr(gitHubTokenKey).(oauth2.Token)
 	if !ok {
-		http.Error(w, "You need to sign in with Github.", http.StatusUnauthorized)
+		http.Error(w, "You need to sign in with GitHub.", http.StatusUnauthorized)
 		return
 	}
 
