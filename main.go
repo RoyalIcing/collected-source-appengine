@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
-	baseLog "log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/icza/session"
-	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
@@ -92,13 +90,6 @@ func init() {
 }
 
 func main() {
-	if appengine.IsDevAppServer() {
-		err := godotenv.Load()
-		if err != nil {
-			baseLog.Fatal("Error loading .env file")
-		}
-	}
-
 	r := mux.NewRouter()
 
 	r.Path("/").Methods("GET").
@@ -109,6 +100,7 @@ func main() {
 
 	AddGitHubRoutes(r)
 	AddTrelloRoutes(r)
+	AddFigmaRoutes(r)
 
 	r.Path("/_sessions/purge").Methods("GET").
 		HandlerFunc(session.PurgeExpiredSessFromDSFunc(""))
