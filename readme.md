@@ -14,7 +14,9 @@
 export PROJECT=YOUR_GOOGLE_CLOUD_PROJECT_ID
 ```
 
-### 2. Create a **.env** file:
+### 2. Run `direnv allow` (Install [direnv](https://github.com/direnv/direnv) if needed)
+
+### 3. Create a **.env** file:
 
 ```
 GITHUB_CLIENT_ID = …
