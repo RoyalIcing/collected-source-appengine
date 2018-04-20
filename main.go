@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/gob"
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -18,27 +17,6 @@ import (
 // UserCredential stores GitHub, Trello API long term keys
 type UserCredential struct {
 	Email string
-}
-
-func writeJSON(w http.ResponseWriter, d interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-
-	b, err := json.Marshal(d)
-
-	if err != nil {
-		http.Error(w, "{\"error\": \"Could not encode json\"}", http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(b)
-}
-
-func writeErrorJSON(w http.ResponseWriter, e error) {
-	writeJSON(w, &struct {
-		Error string `json:"error"`
-	}{
-		Error: e.Error(),
-	})
 }
 
 func rootHandle(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +79,8 @@ func main() {
 	AddGitHubRoutes(r)
 	AddTrelloRoutes(r)
 	AddFigmaRoutes(r)
+
+	http.HandleFunc("/auth/status", AuthStatusHandle)
 
 	r.Path("/_sessions/purge").Methods("GET").
 		HandlerFunc(session.PurgeExpiredSessFromDSFunc(""))

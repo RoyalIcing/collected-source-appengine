@@ -26,7 +26,7 @@ func init() {
 	gob.Register(oauth.AccessToken{})
 }
 
-func makeConsumer(ctx context.Context) *oauth.Consumer {
+func makeTrelloConsumer(ctx context.Context) *oauth.Consumer {
 	consumer := oauth.NewCustomHttpClientConsumer(
 		os.Getenv("TRELLO_API_KEY"),
 		os.Getenv("TRELLO_API_SECRET"),
@@ -48,7 +48,7 @@ func makeConsumer(ctx context.Context) *oauth.Consumer {
 func trelloOauthStartHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
-	consumer := makeConsumer(ctx)
+	consumer := makeTrelloConsumer(ctx)
 
 	requestToken, url, err := consumer.GetRequestTokenAndUrl(os.Getenv("TRELLO_REDIRECT_URL"))
 	if err != nil {
@@ -92,7 +92,7 @@ func trelloOauthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	verificationCode := r.URL.Query().Get("oauth_verifier")
-	consumer := makeConsumer(ctx)
+	consumer := makeTrelloConsumer(ctx)
 	accessToken, err := consumer.AuthorizeToken(&requestToken, verificationCode)
 	if err != nil {
 		http.Error(w, "Could not get Trello token. Please try again.", http.StatusExpectationFailed)
@@ -104,15 +104,20 @@ func trelloOauthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Success!"))
 }
 
-func addContext(f func(http.ResponseWriter, *http.Request, context.Context)) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := appengine.NewContext(r)
-		f(w, r, ctx)
-	})
-}
+// GetTrelloClientFromSession returns a http.Client from a session
+func GetTrelloClientFromSession(ctx context.Context, sess session.Session) *http.Client {
+	accessToken, ok := sess.Attr(trelloAccessTokenKey).(oauth.AccessToken)
+	if !ok {
+		return nil
+	}
 
-func useSession(f http.HandlerFunc) http.HandlerFunc {
-	return f
+	consumer := makeTrelloConsumer(ctx)
+	client, err := consumer.MakeHttpClient(&accessToken)
+	if err != nil {
+		return nil
+	}
+
+	return client
 }
 
 func readProfileHandle(ctx context.Context, w http.ResponseWriter, r *http.Request, sessmgr session.Manager) {
@@ -122,17 +127,9 @@ func readProfileHandle(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	accessToken, ok := sess.Attr("trelloAccessToken").(oauth.AccessToken)
-	if !ok {
+	client := GetTrelloClientFromSession(ctx, sess)
+	if client == nil {
 		http.Error(w, "You need to sign in with Trello.", http.StatusUnauthorized)
-		return
-	}
-
-	consumer := makeConsumer(ctx)
-	client, err := consumer.MakeHttpClient(&accessToken)
-	if err != nil {
-		http.Error(w, "Unable to communicate with Trello. "+err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	resp, err := client.Get("https://trello.com/1/members/me")

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -19,12 +21,36 @@ import (
 const (
 	figmaStateKey = "figmaState"
 	figmaTokenKey = "figmaToken"
+
+	figmaAPIBaseURL = "https://api.figma.com"
 )
 
 var (
 	figmaOauthCfg *oauth2.Config
 	figmaScopes   = []string{"file_read"}
 )
+
+// FigmaAPI allows retrieving data from the Figma API
+type FigmaAPI struct {
+	client *http.Client
+	token  oauth2.Token
+}
+
+func (figma *FigmaAPI) get(path string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", figmaAPIBaseURL+path, nil)
+	if err != nil {
+		return nil, errors.New("Unable to make request for Figma. " + err.Error())
+	}
+
+	req.Header.Set("Authorization", "Bearer "+figma.token.AccessToken)
+
+	return figma.client.Do(req)
+}
+
+// ReadFile loads the contents of a particular file from Figma
+func (figma *FigmaAPI) ReadFile(key string) (*http.Response, error) {
+	return figma.get("/v1/files/" + key)
+}
 
 func init() {
 	clientID := os.Getenv("FIGMA_CLIENT_ID")
@@ -114,6 +140,21 @@ func oAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Success!"))
 }
 
+// GetFigmaAPIFromSession returns a http.Client from a session
+func GetFigmaAPIFromSession(ctx context.Context, sess session.Session) *FigmaAPI {
+	token, ok := sess.Attr(figmaTokenKey).(oauth2.Token)
+	if !ok {
+		return nil
+	}
+
+	client := urlfetch.Client(ctx)
+
+	return &FigmaAPI{
+		client: client,
+		token:  token,
+	}
+}
+
 func figmaReadDocumentHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
@@ -126,23 +167,13 @@ func figmaReadDocumentHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, ok := sess.Attr(figmaTokenKey).(oauth2.Token)
-	if !ok {
+	figmaAPI := GetFigmaAPIFromSession(ctx, sess)
+	if figmaAPI == nil {
 		http.Error(w, "You need to sign in with Figma.", http.StatusUnauthorized)
-		return
 	}
 
 	key := mux.Vars(r)["key"]
-	client := urlfetch.Client(ctx)
-
-	req, err := http.NewRequest("GET", "https://api.figma.com/v1/files/"+key, nil)
-	if err != nil {
-		http.Error(w, "Unable to make request for Figma. "+err.Error(), http.StatusInternalServerError)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-
-	resp, err := client.Do(req)
+	resp, err := figmaAPI.ReadFile(key)
 	if err != nil {
 		http.Error(w, "Unable to load document from Figma. "+err.Error(), resp.StatusCode)
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -12,6 +13,9 @@ import (
 const (
 	sessionDuration = time.Hour * time.Duration(24*30*6) // 6 months
 )
+
+// SessHandlerFunc has context.Context, session.Manager as extra arguments to a http.HandlerFunc
+type SessHandlerFunc func(context.Context, http.ResponseWriter, *http.Request, session.Manager)
 
 // GetSessionManager allows storing data within a session
 func GetSessionManager(ctx context.Context) session.Manager {
@@ -32,13 +36,32 @@ func WithContext(f func(
 }
 
 // WithSessionMgr adds context.Context and session.Manager as extra arguments to a http.HandlerFunc
-func WithSessionMgr(f func(
-	context.Context, http.ResponseWriter, *http.Request, session.Manager,
-)) http.HandlerFunc {
+func WithSessionMgr(f SessHandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := appengine.NewContext(r)
-		sessionmgr := GetSessionManager(ctx)
-		defer sessionmgr.Close()
-		f(ctx, w, r, sessionmgr)
+		sessmgr := GetSessionManager(ctx)
+		defer sessmgr.Close()
+		f(ctx, w, r, sessmgr)
+	})
+}
+
+func writeJSON(w http.ResponseWriter, d interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+
+	b, err := json.Marshal(d)
+
+	if err != nil {
+		http.Error(w, "{\"error\": \"Could not encode json\"}", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(b)
+}
+
+func writeErrorJSON(w http.ResponseWriter, e error) {
+	writeJSON(w, &struct {
+		Error string `json:"error"`
+	}{
+		Error: e.Error(),
 	})
 }

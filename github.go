@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
@@ -98,34 +99,45 @@ func githubOAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// client := github.NewClient(githubOauthCfg.Client(ctx, token))
+
 	sess.SetAttr(gitHubTokenKey, token)
 
 	w.Write([]byte("Success!"))
 }
 
-func githubListReposHandle(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	sessmgr := GetSessionManager(ctx)
-	defer sessmgr.Close()
-
-	sess := sessmgr.Get(r)
-	if sess == nil {
-		http.Error(w, "You must first sign in.", http.StatusUnauthorized)
-		return
-	}
-
+// GetGitHubClientFromSession returns a github.Client from a session
+func GetGitHubClientFromSession(ctx context.Context, sess session.Session) *github.Client {
 	token, ok := sess.Attr(gitHubTokenKey).(oauth2.Token)
 	if !ok {
-		http.Error(w, "You need to sign in with GitHub.", http.StatusUnauthorized)
-		return
+		return nil
 	}
 
-	client := github.NewClient(githubOauthCfg.Client(ctx, &token))
+	return github.NewClient(githubOauthCfg.Client(ctx, &token))
+}
 
+// WithGitHubClient adds github.Client as extra arguments to a SessHandlerFunc
+func WithGitHubClient(f func(
+	context.Context, http.ResponseWriter, *http.Request, *github.Client, session.Manager,
+)) SessHandlerFunc {
+	return SessHandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, sessmgr session.Manager) {
+		sess := sessmgr.Get(r)
+		if sess == nil {
+			http.Error(w, "You must first sign in.", http.StatusUnauthorized)
+			return
+		}
+
+		client := GetGitHubClientFromSession(ctx, sess)
+
+		f(ctx, w, r, client, sessmgr)
+	})
+}
+
+func githubListReposHandle(ctx context.Context, w http.ResponseWriter, r *http.Request, client *github.Client, sessmgr session.Manager) {
 	user, _, err := client.Users.Get(ctx, "")
 	if err != nil {
 		http.Error(w, "No GitHub user found. "+err.Error(), http.StatusExpectationFailed)
+		return
 	}
 
 	opt := &github.RepositoryListOptions{Type: "all", Sort: "full_name"}
@@ -147,5 +159,5 @@ func AddGitHubRoutes(r *mux.Router) {
 		HandlerFunc(githubOAuthCallbackHandle)
 
 	r.Path("/github/repos").Methods("GET").
-		HandlerFunc(githubListReposHandle)
+		HandlerFunc(WithSessionMgr(WithGitHubClient(githubListReposHandle)))
 }
