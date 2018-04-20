@@ -23,7 +23,7 @@ func AuthStatusHandle(w http.ResponseWriter, r *http.Request) {
 
 		sess := sessmgr.Get(r)
 		if sess == nil {
-			data.Session = true
+			data.Session = false
 			return
 		}
 
