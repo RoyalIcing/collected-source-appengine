@@ -19,7 +19,10 @@ type SessHandlerFunc func(context.Context, http.ResponseWriter, *http.Request, s
 
 // GetSessionManager allows storing data within a session
 func GetSessionManager(ctx context.Context) session.Manager {
-	return session.NewCookieManagerOptions(session.NewMemcacheStore(ctx), &session.CookieMngrOptions{
+	return session.NewCookieManagerOptions(session.NewMemcacheStoreOptions(ctx, &session.MemcacheStoreOptions{
+		OnlyMemcache:       false,
+		AsyncDatastoreSave: false,
+	}), &session.CookieMngrOptions{
 		CookieMaxAge: sessionDuration,
 		AllowHTTP:    appengine.IsDevAppServer(),
 	})
