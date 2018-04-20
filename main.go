@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/icza/session"
@@ -61,6 +62,10 @@ func createUserCredentialHandle(w http.ResponseWriter, r *http.Request) {
 	}{
 		Success: true,
 	})
+}
+
+func afterSignInHandle(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, os.Getenv("POST_SIGN_IN_URL"), 302)
 }
 
 func init() {

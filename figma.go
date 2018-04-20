@@ -137,7 +137,7 @@ func oAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 
 	sess.SetAttr(figmaTokenKey, token)
 
-	w.Write([]byte("Success!"))
+	afterSignInHandle(w, r)
 }
 
 // GetFigmaAPIFromSession returns a http.Client from a session

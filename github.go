@@ -99,11 +99,9 @@ func githubOAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// client := github.NewClient(githubOauthCfg.Client(ctx, token))
-
 	sess.SetAttr(gitHubTokenKey, token)
 
-	w.Write([]byte("Success!"))
+	afterSignInHandle(w, r)
 }
 
 // GetGitHubClientFromSession returns a github.Client from a session

@@ -101,7 +101,7 @@ func trelloOauthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 
 	sess.SetAttr(trelloAccessTokenKey, accessToken)
 
-	w.Write([]byte("Success!"))
+	afterSignInHandle(w, r)
 }
 
 // GetTrelloClientFromSession returns a http.Client from a session
