@@ -24,7 +24,7 @@ GITHUB_CLIENT_SECRET = …
 GITHUB_REDIRECT_URL = "http://localhost:8080/signin/github/callback"
 ```
 
-### 3. Run `make dev`
+### 3. Run `make dev`. You server will be available at <http://localhost:8080/>
 
 ## Deploying
 

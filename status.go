@@ -39,3 +39,14 @@ func AuthStatusHandle(w http.ResponseWriter, r *http.Request) {
 		data.Figma = figmaAPI != nil
 	})(w, r)
 }
+
+// SignOutHandle destroys the current session, if there is one
+func SignOutHandle(w http.ResponseWriter, r *http.Request) {
+	WithSessionMgr(func(ctx context.Context, w http.ResponseWriter, r *http.Request, sessmgr session.Manager) {
+		data := &authStatusData{}
+		defer writeJSON(w, data)
+
+		sess := sessmgr.Get(r)
+		sessmgr.Remove(sess, w)
+	})(w, r)
+}

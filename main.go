@@ -85,6 +85,9 @@ func main() {
 	AddTrelloRoutes(r)
 	AddFigmaRoutes(r)
 
+	AddOrgsRoutes(r)
+	AddPostsRoutes(r)
+
 	http.HandleFunc("/auth/status", AuthStatusHandle)
 
 	r.Path("/_sessions/purge").Methods("GET").
