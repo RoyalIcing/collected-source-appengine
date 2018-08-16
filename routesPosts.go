@@ -7,26 +7,27 @@ import (
 	"google.golang.org/appengine"
 )
 
-// Adds routes for working with channels and posts
+// AddPostsRoutes adds routes for working with channels and posts
 func AddPostsRoutes(r *mux.Router) {
-	r.Path("/1/org:{orgName}/channel:{channelName}").Methods("GET").
+	r.Path("/1/org:{orgSlug}/channel:{channelSlug}").Methods("GET").
 		HandlerFunc(getChannelInfoHandle)
-	r.Path("/1/org:{orgName}/channel:{channelName}").Methods("PUT").
+	r.Path("/1/org:{orgSlug}/channel:{channelSlug}").Methods("PUT").
 		HandlerFunc(createChannelHandle)
 
-	r.Path("/1/org:{orgName}/channel:{channelName}/posts").Methods("GET").
+	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
 		HandlerFunc(listPostsInChannelHandle)
-	r.Path("/1/org:{orgName}/channel:{channelName}/posts").Methods("POST").
+	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
 		HandlerFunc(createPostInChannelHandle)
 }
 
 func getChannelInfoHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
+	vars := routeVarsFrom(r)
 
-	orgRepo := NewOrgRepo(ctx, "RoyalIcing")
+	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	channel, err := channelsRepo.GetChannelInfo("design")
+	channel, err := channelsRepo.GetChannelInfo(vars.channelSlug())
 	if err != nil {
 		writeErrorJSON(w, err)
 		return
@@ -37,11 +38,12 @@ func getChannelInfoHandle(w http.ResponseWriter, r *http.Request) {
 
 func createChannelHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
+	vars := routeVarsFrom(r)
 
-	orgRepo := NewOrgRepo(ctx, "RoyalIcing")
+	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	channel, err := channelsRepo.CreateChannel("design")
+	channel, err := channelsRepo.CreateChannel(vars.channelSlug())
 	if err != nil {
 		writeErrorJSON(w, err)
 		return
@@ -52,11 +54,12 @@ func createChannelHandle(w http.ResponseWriter, r *http.Request) {
 
 func listPostsInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
+	vars := routeVarsFrom(r)
 
-	orgRepo := NewOrgRepo(ctx, "RoyalIcing")
+	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	posts, err := channelsRepo.ListPostsInChannel("design")
+	posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
 	if err != nil {
 		writeErrorJSON(w, err)
 		return
@@ -67,11 +70,12 @@ func listPostsInChannelHandle(w http.ResponseWriter, r *http.Request) {
 
 func createPostInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
+	vars := routeVarsFrom(r)
 
-	orgRepo := NewOrgRepo(ctx, "RoyalIcing")
+	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	post, err := channelsRepo.CreatePost("design", "# Hello")
+	post, err := channelsRepo.CreatePost(vars.channelSlug(), "# Hello")
 	if err != nil {
 		writeErrorJSON(w, err)
 		return
