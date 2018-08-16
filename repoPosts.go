@@ -137,8 +137,9 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 		return nil, errors.New("No channel with slug: " + channelSlug)
 	}
 
-	q := datastore.NewQuery("Post").Ancestor(channelContentKey).Limit(100)
-	var posts []Post
+	limit := 100
+	q := datastore.NewQuery("Post").Ancestor(channelContentKey).Limit(limit)
+	posts := make([]Post, 0, limit)
 	var currentPost Post
 	for i := q.Run(repo.ctx); ; {
 		key, err := i.Next(&currentPost)

@@ -13,7 +13,7 @@ Content-Type: application/json
 {}
 
 ###
-PUT http://localhost:8080/1/org:RoyalIcing/channel:design
+PUT http://localhost:8080/1/org:RoyalIcing/channel:engineering
 Content-Type: application/json
 
 ###
@@ -33,3 +33,6 @@ GET http://localhost:8080/1/org:RoyalIcing/channel.id:aghkZXZ-Tm9uZXInCxIDT3JnIg
 
 ###
 GET http://localhost:8080/1/org:RoyalIcing/channel:design/posts
+
+###
+GET http://localhost:8080/1/org:RoyalIcing/channel:engineering/posts
