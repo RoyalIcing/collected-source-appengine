@@ -11,3 +11,18 @@ indexes:
   properties:
   - name: "__key__"
     direction: desc
+- kind: "Post"
+  ancestor: yes
+  properties:
+  - name: "dateCreated"
+    direction: desc
+- kind: "Post"
+  ancestor: yes
+  properties:
+  - name: "DateCreated"
+    direction: desc
+- kind: "Post"
+  ancestor: yes
+  properties:
+  - name: "CreatedAt"
+    direction: desc

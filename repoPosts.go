@@ -169,7 +169,7 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 	}
 
 	limit := 100
-	q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Order("-__key__")
+	q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Order("-CreatedAt")
 	posts := make([]Post, 0, limit)
 	var currentPost Post
 	for i := q.Run(repo.ctx); ; {
