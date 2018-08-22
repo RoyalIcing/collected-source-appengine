@@ -29,9 +29,9 @@ func AddPostsRoutes(r *mux.Router) {
 		HandlerFunc(createPostInChannelHandle)
 
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
-		HandlerFunc(withHTMLTemplate(listPostsInChannelHTMLHandle))
+		HandlerFunc(withHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
-		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle))
+		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
 
 }
 
@@ -127,11 +127,20 @@ func createPostInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, post)
 }
 
-func withHTMLTemplate(f http.HandlerFunc) http.HandlerFunc {
+type htmlHandlerOptions struct {
+	form bool
+}
+
+func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := w.Header()
 		header.Set("Content-Type", "text/html; charset=utf-8")
 		header.Set("X-Content-Type-Options", "nosniff")
+
+		var formErr error
+		if options.form {
+			formErr = r.ParseForm()
+		}
 
 		io.WriteString(w, `<!doctype html>
 <html>
@@ -142,7 +151,12 @@ func withHTMLTemplate(f http.HandlerFunc) http.HandlerFunc {
 <body class="bg-blue-light">
 `)
 
-		f(w, r)
+		if formErr != nil {
+			w.WriteHeader(400)
+			io.WriteString(w, "Invalid form request: "+formErr.Error())
+		} else {
+			f(w, r)
+		}
 
 		io.WriteString(w, "</body></html>")
 	})
@@ -215,16 +229,9 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(400)
-		io.WriteString(w, "Invalid form request: "+err.Error())
-		return
-	}
-
 	markdownSource := r.PostFormValue("markdownSource")
 
-	_, err = channelsRepo.CreatePost(vars.channelSlug(), markdownSource)
+	_, err := channelsRepo.CreatePost(vars.channelSlug(), markdownSource)
 	if err != nil {
 		io.WriteString(w, "Error creating post: "+err.Error())
 		return
