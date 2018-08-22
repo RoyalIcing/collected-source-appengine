@@ -140,12 +140,11 @@ func withHTMLTemplate(f http.HandlerFunc) http.HandlerFunc {
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-blue-light">
-<main class="max-w-md mx-auto mt-4 mb-8">
 `)
 
 		f(w, r)
 
-		io.WriteString(w, "</main></body></html>")
+		io.WriteString(w, "</body></html>")
 	})
 }
 
@@ -199,14 +198,14 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sw := bufio.NewWriter(w)
-	defer sw.Flush()
-
 	w.WriteHeader(200)
 
-	sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
-	viewCreatePostFormInChannelHTMLHandle(vars, sw)
-	viewPostsInChannelHTMLHandle(posts, sw)
+	vars.ToOrgViewModel().ViewPage(w, func(sw *bufio.Writer) {
+		sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
+		viewCreatePostFormInChannelHTMLHandle(vars, sw)
+		viewPostsInChannelHTMLHandle(posts, sw)
+	})
+
 }
 
 func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
@@ -237,10 +236,9 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sw := bufio.NewWriter(w)
-	defer sw.Flush()
-
-	sw.WriteString("<h1>Posts</h1>")
-	viewCreatePostFormInChannelHTMLHandle(vars, sw)
-	viewPostsInChannelHTMLHandle(posts, sw)
+	vars.ToOrgViewModel().ViewPage(w, func(sw *bufio.Writer) {
+		sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
+		viewCreatePostFormInChannelHTMLHandle(vars, sw)
+		viewPostsInChannelHTMLHandle(posts, sw)
+	})
 }

@@ -51,6 +51,7 @@ func WithSessionMgr(f SessHandlerFunc) http.HandlerFunc {
 func writeJSON(w http.ResponseWriter, d interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 
+	// TODO: use json.NewEncoder(w).Encode(...)
 	b, err := json.Marshal(d)
 
 	if err != nil {
