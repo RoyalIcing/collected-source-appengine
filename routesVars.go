@@ -23,3 +23,7 @@ func (v RouteVars) orgSlug() string {
 func (v RouteVars) channelSlug() string {
 	return v.vars["channelSlug"]
 }
+
+func (v RouteVars) postID() string {
+	return v.vars["postID"]
+}

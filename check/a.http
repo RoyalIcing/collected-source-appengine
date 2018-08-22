@@ -1,4 +1,5 @@
 @host = http://localhost:8080
+# @host = https://collected-193006.appspot.com
 
 ###
 GET {{host}}/
@@ -7,20 +8,20 @@ GET {{host}}/
 POST {{host}}/user-credentials
 
 ###
-PUT http://localhost:8080/1/org:RoyalIcing
+PUT {{host}}/1/org:RoyalIcing
 Content-Type: application/json
 
 {}
 
 ###
-PUT http://localhost:8080/1/org:RoyalIcing/channel:engineering
+PUT {{host}}/1/org:RoyalIcing/channel:design
 Content-Type: application/json
 
 ###
-GET http://localhost:8080/1/org:RoyalIcing/channel:design
+GET {{host}}/1/org:RoyalIcing/channel:design
 
 ###
-POST http://localhost:8080/1/org:RoyalIcing/channel:design/posts
+POST {{host}}/1/org:RoyalIcing/channel:design/posts
 Content-Type: application/json
 
 {
@@ -29,10 +30,16 @@ Content-Type: application/json
 
 
 ###
-GET http://localhost:8080/1/org:RoyalIcing/channel.id:aghkZXZ-Tm9uZXInCxIDT3JnIgpSb3lhbEljaW5nDAsSDkNoYW5uZWxDb250ZW50GAQM/posts
+GET {{host}}/1/org:RoyalIcing/channel.id:aghkZXZ-Tm9uZXInCxIDT3JnIgpSb3lhbEljaW5nDAsSDkNoYW5uZWxDb250ZW50GAQM/posts
 
 ###
-GET http://localhost:8080/1/org:RoyalIcing/channel:design/posts
+GET {{host}}/1/org:RoyalIcing/channel:design/posts
 
 ###
-GET http://localhost:8080/1/org:RoyalIcing/channel:engineering/posts
+GET {{host}}/1/org:RoyalIcing/channel:design/posts/aghkZXZ-Tm9uZXIxCxIDT3JnIgpSb3lhbEljaW5nDAsSDkNoYW5uZWxDb250ZW50GAEMCxIEUG9zdBgIDA
+
+###
+GET {{host}}/1/org:RoyalIcing/channel:design/posts.html
+
+###
+GET {{host}}/1/org:RoyalIcing/channel:engineering/posts

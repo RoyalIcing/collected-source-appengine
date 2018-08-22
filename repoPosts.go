@@ -3,8 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"time"
 
 	"google.golang.org/appengine/datastore"
+)
+
+const (
+	channelSlugType = "ChannelSlug"
+	postType        = "Post"
 )
 
 // MarkdownDocument is a text/markdown document
@@ -41,7 +47,8 @@ type ChannelSlug struct {
 
 // Post has a markdown document
 type Post struct {
-	Key *datastore.Key `appengine:"-" json:"id"`
+	CreatedAt time.Time      `json:"createdAt"`
+	Key       *datastore.Key `appengine:"-" json:"id"`
 	//AuthorID string            `json:"authorID"`
 	Content MarkdownDocument `json:"content"`
 }
@@ -61,7 +68,7 @@ func NewChannelsRepo(ctx context.Context, orgRepo OrgRepo) ChannelsRepo {
 }
 
 func (repo ChannelsRepo) channelSlugKeyFor(slug string) *datastore.Key {
-	return datastore.NewKey(repo.ctx, "ChannelSlug", slug, 0, repo.orgRepo.RootKey())
+	return datastore.NewKey(repo.ctx, channelSlugType, slug, 0, repo.orgRepo.RootKey())
 }
 
 func (repo ChannelsRepo) channelContentKeyFor(slug string) *datastore.Key {
@@ -116,16 +123,40 @@ func (repo ChannelsRepo) CreatePost(channelSlug string, markdownSource string) (
 		return nil, errors.New("No channel with slug: " + channelSlug)
 	}
 
-	postKey := datastore.NewIncompleteKey(repo.ctx, "Post", channelContentKey)
+	postKey := datastore.NewIncompleteKey(repo.ctx, postType, channelContentKey)
 
 	markdownDocument := NewMarkdownDocument(markdownSource)
-	post := Post{Content: markdownDocument}
+	post := Post{
+		Content:   markdownDocument,
+		CreatedAt: time.Now().UTC(),
+	}
 	postKey, err := datastore.Put(repo.ctx, postKey, &post)
 	if err != nil {
 		return nil, err
 	}
 
 	post.Key = postKey
+
+	return &post, nil
+}
+
+// GetPostWithIDInChannel lists all post in a channel of a certain slug
+func (repo ChannelsRepo) GetPostWithIDInChannel(channelSlug string, id string) (*Post, error) {
+	channelContentKey := repo.channelContentKeyFor(channelSlug)
+	if channelContentKey == nil {
+		return nil, errors.New("No channel with slug: " + channelSlug)
+	}
+
+	postKey := datastore.NewKey(repo.ctx, postType, id, 0, channelContentKey)
+
+	var post Post
+	err := datastore.Get(repo.ctx, postKey, &post)
+	if err == datastore.ErrNoSuchEntity {
+		return nil, errors.New("No post with id: " + id)
+	}
+	if err != nil {
+		return nil, errors.New("Error reading post with id: " + id + ": " + err.Error())
+	}
 
 	return &post, nil
 }
@@ -138,7 +169,7 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 	}
 
 	limit := 100
-	q := datastore.NewQuery("Post").Ancestor(channelContentKey).Limit(limit)
+	q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Order("-__key__")
 	posts := make([]Post, 0, limit)
 	var currentPost Post
 	for i := q.Run(repo.ctx); ; {
