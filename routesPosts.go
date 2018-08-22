@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
-	// "time"
 
 	"html/template"
 
@@ -151,7 +151,7 @@ func withHTMLTemplate(f http.HandlerFunc) http.HandlerFunc {
 
 func viewPostsInChannelHTMLHandle(posts []Post, w *bufio.Writer) {
 	t := template.Must(template.New("createdAt").Parse(`
-<div class="p-4 bg-white border-b border-blue-light">
+<div class="p-4 pb-6 bg-white border-b border-blue-light">
 <div>
 <span class="font-bold">Name</span>
 <span class="text-grey-dark">@handle</span>
@@ -172,7 +172,7 @@ func viewPostsInChannelHTMLHandle(posts []Post, w *bufio.Writer) {
 		}{
 			CreatedAtDisplay: post.CreatedAt.Format(time.RFC822),
 			CreatedAtRFC3339: post.CreatedAt.Format(time.RFC3339),
-			MarkdownSource:   post.Content.Source,
+			MarkdownSource:   strings.TrimSpace(post.Content.Source),
 		})
 	}
 }
@@ -180,7 +180,7 @@ func viewPostsInChannelHTMLHandle(posts []Post, w *bufio.Writer) {
 func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
 <form method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
-<textarea name="markdownSource" rows="4" class="block w-full p-2 border border-blue"></textarea>
+<textarea name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-blue rounded"></textarea>
 <button type="submit" class="mt-2 px-4 py-2 text-white bg-blue-darkest">Post</button>
 </form>
 `)
@@ -204,7 +204,7 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 
-	sw.WriteString("<h1>Posts</h1>")
+	sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
 	viewCreatePostFormInChannelHTMLHandle(vars, sw)
 	viewPostsInChannelHTMLHandle(posts, sw)
 }
