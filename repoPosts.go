@@ -163,22 +163,19 @@ func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
 }
 
 // GetPostWithIDInChannel lists all post in a channel of a certain slug
-func (repo ChannelsRepo) GetPostWithIDInChannel(channelSlug string, id string) (*Post, error) {
-	channelContentKey := repo.channelContentKeyFor(channelSlug)
-	if channelContentKey == nil {
-		return nil, errors.New("No channel with slug: " + channelSlug)
-	}
-
-	postKey := datastore.NewKey(repo.ctx, postType, id, 0, channelContentKey)
+func (repo ChannelsRepo) GetPostWithIDInChannel(channelSlug string, postID string) (*Post, error) {
+	postKey, err := datastore.DecodeKey(postID)
 
 	var post Post
-	err := datastore.Get(repo.ctx, postKey, &post)
+	err = datastore.Get(repo.ctx, postKey, &post)
 	if err == datastore.ErrNoSuchEntity {
-		return nil, errors.New("No post with id: " + id)
+		return nil, errors.New("No post with id: " + postID)
 	}
 	if err != nil {
-		return nil, errors.New("Error reading post with id: " + id + ": " + err.Error())
+		return nil, errors.New("Error reading post with id: " + postID + ": " + err.Error())
 	}
+
+	post.Key = postKey
 
 	return &post, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -30,6 +31,8 @@ func AddPostsRoutes(r *mux.Router) {
 
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
 		HandlerFunc(withHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{}))
+	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}").Methods("GET").
+		HandlerFunc(withHTMLTemplate(showPostInChannelHTMLHandle, htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
 		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}/posts").Methods("POST").
@@ -192,7 +195,15 @@ app.register('posts', class extends Stimulus.Controller {
 	})
 }
 
-func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Writer) {
+func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
+	w.WriteString(fmt.Sprintf(`
+<h1 class="%s mb-4">
+<a href="%s" class="text-black no-underline hover:underline">💬 %s</a>
+</h1>
+`, fontSize, m.HTMLPostsURL(), m.ChannelSlug))
+}
+
+func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 	t := template.New("post").Funcs(template.FuncMap{
 		"postURL": func(postID string) string {
 			return m.HTMLPostURL(postID)
@@ -222,8 +233,25 @@ func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Wri
 </div>
 {{end}}
 
+{{define "topBarLarge"}}
+<div>
+<span class="text-lg font-bold">Name</span>
+<span class="text-grey-dark">@handle</span>
+·
+<a href="{{postURL .Key.Encode}}" class="text-grey-dark no-underline hover:underline">
+<time datetime="{{formatTimeRFC3339 .CreatedAt}}">{{displayTime .CreatedAt}}</time>
+</a>
+</div>
+{{end}}
+
 {{define "content"}}
 <p class="whitespace-pre-wrap">
+{{formatMarkdown .Content.Source}}
+</p>
+{{end}}
+
+{{define "contentLarge"}}
+<p class="text-xl whitespace-pre-wrap">
 {{formatMarkdown .Content.Source}}
 </p>
 {{end}}
@@ -235,6 +263,7 @@ func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Wri
 </div>
 {{end}}
 
+{{define "postInList"}}
 <div class="p-4 pb-6 bg-white border-b border-blue-light" data-target="posts.post">
 {{template "topBar" .}}
 {{template "content" .}}
@@ -250,10 +279,39 @@ func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Wri
 {{end}}
 </div>
 </div>
+{{end}}
+
+{{define "postIndividual"}}
+<div class="p-4 pb-6 bg-white border-b border-blue-light" data-target="posts.post">
+{{template "topBarLarge" .}}
+{{template "contentLarge" .}}
+
+<div class="mt-4">
+	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
+	<button data-action="posts#beginReply" class="px-2 py-1 bg-grey-lighter"> ↩︎</button>
+</div>
+
+<div data-target="posts.replies">
+{{range .Replies}}
+{{template "reply" .}}
+{{end}}
+</div>
+</div>
+{{end}}
 `))
 
+	return t
+}
+
+func viewPostInChannelHTMLHandle(post Post, m ChannelViewModel, w *bufio.Writer) {
+	t := makeViewPostTemplate(m)
+	t.ExecuteTemplate(w, "postIndividual", post)
+}
+
+func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Writer) {
+	t := makeViewPostTemplate(m)
 	for _, post := range posts {
-		t.Execute(w, post)
+		t.ExecuteTemplate(w, "postInList", post)
 	}
 }
 
@@ -275,7 +333,7 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 	posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
 	if err != nil {
-		io.WriteString(w, "Error: "+err.Error())
+		io.WriteString(w, "Error loading posts: "+err.Error())
 		return
 	}
 
@@ -283,13 +341,36 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
-		sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
+		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
 		sw.WriteString(`<div data-controller="posts">`)
 		viewCreatePostFormInChannelHTMLHandle(vars, sw)
 		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
 		sw.WriteString(`</div>`)
 	})
+}
 
+func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+	vars := routeVarsFrom(r)
+
+	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
+	channelsRepo := NewChannelsRepo(ctx, orgRepo)
+
+	post, err := channelsRepo.GetPostWithIDInChannel(vars.channelSlug(), vars.postID())
+	if err != nil {
+		io.WriteString(w, "Error loading post: "+err.Error())
+		return
+	}
+
+	w.WriteHeader(200)
+
+	channelViewModel := vars.ToChannelViewModel()
+	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
+		viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
+		sw.WriteString(`<div data-controller="posts">`)
+		viewPostInChannelHTMLHandle(*post, channelViewModel, sw)
+		sw.WriteString(`</div>`)
+	})
 }
 
 func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
