@@ -32,7 +32,8 @@ func AddPostsRoutes(r *mux.Router) {
 		HandlerFunc(withHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
 		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
-
+	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}/posts").Methods("POST").
+		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
 }
 
 func getChannelInfoHandle(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +119,13 @@ func createPostInChannelHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := channelsRepo.CreatePost(vars.channelSlug(), body.MarkdownSource)
+	input := CreatePostInput{
+		ChannelSlug:          vars.channelSlug(),
+		ParentPostKeyEncoded: nil,
+		MarkdownSource:       body.MarkdownSource,
+	}
+
+	post, err := channelsRepo.CreatePost(input)
 	if err != nil {
 		writeErrorJSON(w, err)
 		return
@@ -147,6 +154,7 @@ func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 <head>
 <meta charset="utf-8">
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
+<script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
 </head>
 <body class="bg-blue-light">
 `)
@@ -158,41 +166,100 @@ func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 			f(w, r)
 		}
 
+		io.WriteString(w, `
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+const app = Stimulus.Application.start();
+
+app.register('posts', class extends Stimulus.Controller {
+  static get targets() {
+		return [ 'post', 'replyHolder' ];
+	}
+
+  beginReply({ target: button }) {
+		const post = button.parentElement;
+		const createReplyForm = post.querySelector('[data-target="posts.createReplyForm"]');
+		const createForm = this.targets.find('createForm'); // this.createFormTarget;
+		createReplyForm.innerHTML = createForm.innerHTML;
+    //this.replyFieldTarget.textContent = "This is my reply"
+  }
+});
+});
+</script>
+`)
+
 		io.WriteString(w, "</body></html>")
 	})
 }
 
-func viewPostsInChannelHTMLHandle(posts []Post, w *bufio.Writer) {
-	t := template.Must(template.New("createdAt").Parse(`
-<div class="p-4 pb-6 bg-white border-b border-blue-light">
+func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Writer) {
+	t := template.New("post").Funcs(template.FuncMap{
+		"postURL": func(postID string) string {
+			return m.HTMLPostURL(postID)
+		},
+		"childPostsURL": func(postID string) string {
+			return m.HTMLPostChildPostsURL(postID)
+		},
+		"formatMarkdown": func(markdownSource string) string {
+			return strings.TrimSpace(markdownSource)
+		},
+		"formatTimeRFC3339": func(t time.Time) string {
+			return t.Format(time.RFC3339)
+		},
+		"displayTime": func(t time.Time) string {
+			return t.Format(time.RFC822)
+		},
+	})
+	t = template.Must(t.Parse(`
+{{define "topBar"}}
 <div>
 <span class="font-bold">Name</span>
 <span class="text-grey-dark">@handle</span>
 ·
-<time datetime="{{.CreatedAtRFC3339}}">{{.CreatedAtDisplay}}</time>
+<a href="{{postURL .Key.Encode}}" class="text-grey-dark no-underline hover:underline">
+<time datetime="{{formatTimeRFC3339 .CreatedAt}}">{{displayTime .CreatedAt}}</time>
+</a>
 </div>
+{{end}}
+
+{{define "content"}}
 <p class="whitespace-pre-wrap">
-{{.MarkdownSource}}
+{{formatMarkdown .Content.Source}}
 </p>
+{{end}}
+
+{{define "reply"}}
+<div class="pt-4 pb-4 bg-white" data-target="posts.post">
+{{template "topBar" .}}
+{{template "content" .}}
+</div>
+{{end}}
+
+<div class="p-4 pb-6 bg-white border-b border-blue-light" data-target="posts.post">
+{{template "topBar" .}}
+{{template "content" .}}
+
+<div class="mt-4">
+	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
+	<button data-action="posts#beginReply" class="px-2 py-1 bg-grey-lighter"> ↩︎</button>
+</div>
+
+<div data-target="posts.replies">
+{{range .Replies}}
+{{template "reply" .}}
+{{end}}
+</div>
 </div>
 `))
 
 	for _, post := range posts {
-		t.Execute(w, struct {
-			CreatedAtDisplay string
-			CreatedAtRFC3339 string
-			MarkdownSource   string
-		}{
-			CreatedAtDisplay: post.CreatedAt.Format(time.RFC822),
-			CreatedAtRFC3339: post.CreatedAt.Format(time.RFC3339),
-			MarkdownSource:   strings.TrimSpace(post.Content.Source),
-		})
+		t.Execute(w, post)
 	}
 }
 
 func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
-<form method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
+<form data-target="posts.createForm" method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
 <textarea name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-blue rounded"></textarea>
 <button type="submit" class="mt-2 px-4 py-2 text-white bg-blue-darkest">Post</button>
 </form>
@@ -214,10 +281,13 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 
-	vars.ToOrgViewModel().ViewPage(w, func(sw *bufio.Writer) {
+	channelViewModel := vars.ToChannelViewModel()
+	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
+		sw.WriteString(`<div data-controller="posts">`)
 		viewCreatePostFormInChannelHTMLHandle(vars, sw)
-		viewPostsInChannelHTMLHandle(posts, sw)
+		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
+		sw.WriteString(`</div>`)
 	})
 
 }
@@ -229,9 +299,13 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	markdownSource := r.PostFormValue("markdownSource")
+	input := CreatePostInput{
+		ChannelSlug:          vars.channelSlug(),
+		ParentPostKeyEncoded: vars.optionalPostID(),
+		MarkdownSource:       r.PostFormValue("markdownSource"),
+	}
 
-	_, err := channelsRepo.CreatePost(vars.channelSlug(), markdownSource)
+	_, err := channelsRepo.CreatePost(input)
 	if err != nil {
 		io.WriteString(w, "Error creating post: "+err.Error())
 		return
@@ -243,9 +317,10 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars.ToOrgViewModel().ViewPage(w, func(sw *bufio.Writer) {
+	channelViewModel := vars.ToChannelViewModel()
+	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
 		viewCreatePostFormInChannelHTMLHandle(vars, sw)
-		viewPostsInChannelHTMLHandle(posts, sw)
+		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
 	})
 }

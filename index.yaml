@@ -26,3 +26,9 @@ indexes:
   properties:
   - name: "CreatedAt"
     direction: desc
+- kind: "Post"
+  ancestor: yes
+  properties:
+  - name: "ParentPostKey"
+  - name: "CreatedAt"
+    direction: desc

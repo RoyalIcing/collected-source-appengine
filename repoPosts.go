@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"google.golang.org/appengine/datastore"
@@ -35,7 +37,7 @@ func NewMarkdownDocument(source string) MarkdownDocument {
 
 // ChannelContent holds main data of a channel
 type ChannelContent struct {
-	Key         *datastore.Key `appengine:"-" json:"id"`
+	Key         *datastore.Key `datastore:"-" json:"id"`
 	Slug        string         `json:"slug"`
 	Description string         `json:"description"`
 }
@@ -47,10 +49,12 @@ type ChannelSlug struct {
 
 // Post has a markdown document
 type Post struct {
-	CreatedAt time.Time      `json:"createdAt"`
-	Key       *datastore.Key `appengine:"-" json:"id"`
+	CreatedAt     time.Time      `json:"createdAt"`
+	Key           *datastore.Key `datastore:",omitempty" json:"id"`
+	ParentPostKey *datastore.Key `json:"parentPostID"`
 	//AuthorID string            `json:"authorID"`
 	Content MarkdownDocument `json:"content"`
+	Replies *[]Post          `datastore:"-" json:"replies"`
 }
 
 // ChannelsRepo lets you query the channels repository
@@ -116,21 +120,39 @@ func (repo ChannelsRepo) GetChannelInfo(slug string) (*ChannelContent, error) {
 	return &channelContent, err
 }
 
+// CreatePostInput is used to create new posts
+type CreatePostInput struct {
+	ChannelSlug          string
+	ParentPostKeyEncoded *string
+	MarkdownSource       string
+}
+
 // CreatePost creates a new post
-func (repo ChannelsRepo) CreatePost(channelSlug string, markdownSource string) (*Post, error) {
-	channelContentKey := repo.channelContentKeyFor(channelSlug)
+func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
+	var err error
+
+	channelContentKey := repo.channelContentKeyFor(input.ChannelSlug)
 	if channelContentKey == nil {
-		return nil, errors.New("No channel with slug: " + channelSlug)
+		return nil, fmt.Errorf("No channel with slug: %s", input.ChannelSlug)
 	}
 
 	postKey := datastore.NewIncompleteKey(repo.ctx, postType, channelContentKey)
 
-	markdownDocument := NewMarkdownDocument(markdownSource)
-	post := Post{
-		Content:   markdownDocument,
-		CreatedAt: time.Now().UTC(),
+	var parentPostKey *datastore.Key
+	if input.ParentPostKeyEncoded != nil {
+		parentPostKey, err = datastore.DecodeKey(*input.ParentPostKeyEncoded)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid parent post id: %s", *input.ParentPostKeyEncoded)
+		}
 	}
-	postKey, err := datastore.Put(repo.ctx, postKey, &post)
+
+	markdownDocument := NewMarkdownDocument(input.MarkdownSource)
+	post := Post{
+		ParentPostKey: parentPostKey,
+		Content:       markdownDocument,
+		CreatedAt:     time.Now().UTC(),
+	}
+	postKey, err = datastore.Put(repo.ctx, postKey, &post)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +191,11 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 	}
 
 	limit := 100
+	// q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Filter("ParentPostKey >", nil).Order("ParentPostKey").Order("-CreatedAt")
+	// q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Filter("ParentPostKey =", nil).Order("-CreatedAt")
 	q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Order("-CreatedAt")
 	posts := make([]Post, 0, limit)
+	replies := make(map[string][]Post)
 	var currentPost Post
 	for i := q.Run(repo.ctx); ; {
 		key, err := i.Next(&currentPost)
@@ -182,7 +207,26 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 		}
 
 		currentPost.Key = key
-		posts = append(posts, currentPost)
+
+		if currentPost.ParentPostKey != nil {
+			replies[currentPost.ParentPostKey.Encode()] = append(replies[currentPost.ParentPostKey.Encode()], currentPost)
+			log.Printf("added reply for %v now %v\n", currentPost.ParentPostKey, replies)
+		} else {
+			posts = append(posts, currentPost)
+		}
 	}
-	return posts, nil
+
+	postsWithReplies := make([]Post, 0, len(posts))
+	for _, post := range posts {
+		postReplies := replies[post.Key.Encode()]
+		for i, j := 0, len(postReplies)-1; i < j; i, j = i+1, j-1 {
+			postReplies[i], postReplies[j] = postReplies[j], postReplies[i]
+		}
+		log.Printf("replies for %v are %v\n", post.Key, postReplies)
+		post.Replies = &postReplies
+
+		postsWithReplies = append(postsWithReplies, post)
+	}
+
+	return postsWithReplies, nil
 }

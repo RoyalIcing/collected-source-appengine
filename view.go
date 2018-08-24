@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"html/template"
 	"io"
 )
 
-// OrgViewModel models viewing orgs
+// OrgViewModel models viewing an org
 type OrgViewModel struct {
 	OrgSlug string
 }
@@ -36,9 +37,43 @@ func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(w *bufio.Writer
 	sw.WriteString(`</main>`)
 }
 
+// ChannelViewModel models viewing a channel within an org
+type ChannelViewModel struct {
+	Org         OrgViewModel
+	ChannelSlug string
+}
+
+// Channel makes a model for
+func (m OrgViewModel) Channel(channelSlug string) ChannelViewModel {
+	return ChannelViewModel{
+		Org:         m,
+		ChannelSlug: channelSlug,
+	}
+}
+
+// HTMLPostsURL builds a URL to a channel’s posts web page
+func (m ChannelViewModel) HTMLPostsURL() string {
+	return fmt.Sprintf("/org:%s/channel:%s/posts", m.Org.OrgSlug, m.ChannelSlug)
+}
+
+// HTMLPostURL builds a URL to a post
+func (m ChannelViewModel) HTMLPostURL(postID string) string {
+	return fmt.Sprintf("/org:%s/channel:%s/posts/%s", m.Org.OrgSlug, m.ChannelSlug, postID)
+}
+
+// HTMLPostChildPostsURL builds a URL to a post’s child posts web page
+func (m ChannelViewModel) HTMLPostChildPostsURL(postID string) string {
+	return fmt.Sprintf("/org:%s/channel:%s/posts/%s/posts", m.Org.OrgSlug, m.ChannelSlug, postID)
+}
+
 // ToOrgViewModel converts route vars into OrgViewModel
 func (v RouteVars) ToOrgViewModel() OrgViewModel {
 	return OrgViewModel{
 		OrgSlug: v.orgSlug(),
 	}
+}
+
+// ToChannelViewModel converts route vars into ChannelViewModel
+func (v RouteVars) ToChannelViewModel() ChannelViewModel {
+	return v.ToOrgViewModel().Channel(v.channelSlug())
 }
