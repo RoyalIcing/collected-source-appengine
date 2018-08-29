@@ -29,10 +29,15 @@ func NewMarkdownDocument(source string) MarkdownDocument {
 }
 
 // MediaType resolved
-// func (markdownDocument *MarkdownDocument) MediaType() MediaType {
-// 	parameters := []string{}
-// 	mediaType := NewMediaType("text", "markdown", parameters)
-// 	return mediaType
+func (markdownDocument *MarkdownDocument) MediaType() MediaType {
+	parameters := []string{}
+	mediaType := NewMediaType("text", "markdown", parameters)
+	return mediaType
+}
+
+// Source resolved
+// func (markdownDocument *MarkdownDocument) Source() *string {
+// 	return &markdownDocument.source
 // }
 
 // ChannelContent holds main data of a channel

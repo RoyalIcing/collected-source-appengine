@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/icza/session"
 	"golang.org/x/oauth2"
 	"google.golang.org/appengine"
@@ -89,6 +90,10 @@ func main() {
 	AddPostsRoutes(r)
 
 	http.HandleFunc("/auth/status", AuthStatusHandle)
+
+	resolver := NewDataStoreResolver()
+	schema := MakeSchema(&resolver)
+	http.Handle("/graphql", &relay.Handler{Schema: schema})
 
 	r.Path("/_sessions/purge").Methods("GET").
 		HandlerFunc(session.PurgeExpiredSessFromDSFunc(""))
