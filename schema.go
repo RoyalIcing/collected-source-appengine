@@ -78,10 +78,12 @@ type Post implements Node {
 	#replies: PostsConnection
 }
 
-type Channel implements Node, Actor {
+type Channel implements Node {
 	id: ID!
 
 	slug: String
+
+	posts: PostsConnection
 }
 
 

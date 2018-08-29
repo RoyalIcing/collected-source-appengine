@@ -4,12 +4,54 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 )
 
+// MarkdownDocumentResolver decorates a MarkdownDocument for GraphQL
+type MarkdownDocumentResolver struct {
+	MarkdownDocument
+}
+
+// Source resolved
+func (markdownDocument *MarkdownDocument) source() string {
+	return markdownDocument.Source
+}
+
+// Source resolved
+func (r *MarkdownDocumentResolver) Source() *string {
+	s := r.source()
+	return &s
+}
+
+// MediaType resolved
+func (r *MarkdownDocumentResolver) MediaType() MediaType {
+	parameters := []string{}
+	mediaType := NewMediaType("text", "markdown", parameters)
+	return mediaType
+}
+
+// PostResolver decorates a Post for GraphQL
+type PostResolver struct {
+	Post
+}
+
+// ID resolved
+func (r *PostResolver) ID() graphql.ID {
+	return graphql.ID(r.Key.Encode())
+}
+
+func (post Post) content() MarkdownDocument {
+	return post.Content
+}
+
+// Content resolved
+func (r *PostResolver) Content() *MarkdownDocumentResolver {
+	return &MarkdownDocumentResolver{r.content()}
+}
+
 // Author resolved
-// func (post *Post) Author() *Actor {
-// 	person := NewPerson("999", "Example", "Yep", []string{}, map[string]string{})
-// 	actor := Actor{actor: person}
-// 	return &actor
-// }
+func (post *Post) Author() *ActorResolver {
+	dummy := DummyActor{}
+	actor := ActorResolver{dummy}
+	return &actor
+}
 
 // PostEdge is a reference to a post within a connection
 type PostEdge struct {
@@ -27,8 +69,11 @@ func NewPostEdge(post *Post, cursor string) *PostEdge {
 }
 
 // Node resolved
-func (postEdge *PostEdge) Node() *Post {
-	return postEdge.post
+func (postEdge *PostEdge) Node() *PostResolver {
+	if postEdge.post == nil {
+		return nil
+	}
+	return &PostResolver{*postEdge.post}
 }
 
 // Cursor resolved
@@ -36,30 +81,30 @@ func (postEdge *PostEdge) Cursor() graphql.ID {
 	return graphql.ID(postEdge.cursor)
 }
 
-// PostConnection is a connection to a collection of posts
-type PostConnection struct {
+// PostsConnection is a connection to a collection of posts
+type PostsConnection struct {
 	edges *[]*PostEdge
 }
 
-// NewPostConnection makes a post connection with the provided values
-func NewPostConnection(edges *[]*PostEdge) PostConnection {
-	postConnection := PostConnection{
+// NewPostsConnection makes a post connection with the provided values
+func NewPostsConnection(edges *[]*PostEdge) PostsConnection {
+	postsConnection := PostsConnection{
 		edges: edges,
 	}
-	return postConnection
+	return postsConnection
 }
 
 // Edges resolved
-func (postConnection PostConnection) Edges() *[]*PostEdge {
-	return postConnection.edges
+func (postsConnection PostsConnection) Edges() *[]*PostEdge {
+	return postsConnection.edges
 }
 
 // TotalCount resolved
-func (postConnection PostConnection) TotalCount() *int32 {
-	if postConnection.edges == nil {
+func (postsConnection PostsConnection) TotalCount() *int32 {
+	if postsConnection.edges == nil {
 		return nil
 	}
 
-	count := int32(len(*postConnection.edges))
+	count := int32(len(*postsConnection.edges))
 	return &count
 }

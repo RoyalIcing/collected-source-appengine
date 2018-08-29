@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"fmt"
+
 	graphql "github.com/graph-gophers/graphql-go"
 )
 
@@ -25,4 +28,28 @@ func (channel *Channel) ID() graphql.ID {
 // Slug resolved
 func (channel *Channel) Slug() *string {
 	return &channel.slug
+}
+
+// Posts resolved
+func (channel *Channel) Posts(ctx context.Context) (*PostsConnection, error) {
+	orgSlug := "RoyalIcing"
+
+	orgRepo := NewOrgRepo(ctx, orgSlug)
+	channelsRepo := NewChannelsRepo(ctx, orgRepo)
+
+	posts, err := channelsRepo.ListPostsInChannel(channel.slug)
+	if err != nil {
+		return nil, fmt.Errorf("Error loading posts: %s", err.Error())
+	}
+
+	postEdges := make([]*PostEdge, 0, len(posts))
+	for _, post := range posts {
+		localPost := post
+		postEdge := NewPostEdge(&localPost, "-")
+		postEdges = append(postEdges, postEdge)
+	}
+
+	c := NewPostsConnection(&postEdges)
+
+	return &c, nil
 }
