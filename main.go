@@ -93,7 +93,13 @@ func main() {
 
 	resolver := NewDataStoreResolver()
 	schema := MakeSchema(&resolver)
-	http.Handle("/graphql", &relay.Handler{Schema: schema})
+
+	graphqlHandler := relay.Handler{Schema: schema}
+	http.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
+		ctx := appengine.NewContext(r)
+		r = r.WithContext(ctx)
+		graphqlHandler.ServeHTTP(w, r)
+	})
 
 	r.Path("/_sessions/purge").Methods("GET").
 		HandlerFunc(session.PurgeExpiredSessFromDSFunc(""))
