@@ -185,7 +185,17 @@ app.register('posts', class extends Stimulus.Controller {
 		const createForm = this.targets.find('createForm'); // this.createFormTarget;
 		createReplyForm.innerHTML = createForm.innerHTML;
     //this.replyFieldTarget.textContent = "This is my reply"
-  }
+	}
+	
+	markdownInputChanged({ target: textarea }) {
+		const isCommand = textarea.value[0] === '/';
+		this.changeSubmitMode(isCommand ? 'run' : 'submit');
+	}
+
+	changeSubmitMode(mode) {
+		this.targets.find('submitPostButton').classList.toggle('hidden', mode !== 'submit');
+		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
+	}
 });
 });
 </script>
@@ -322,8 +332,9 @@ func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Wri
 func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
 <form data-target="posts.createForm" method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
-<textarea name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-blue rounded"></textarea>
-<button type="submit" class="mt-2 px-4 py-2 text-white bg-blue-darkest">Post</button>
+<textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-blue rounded"></textarea>
+<button data-target="posts.submitPostButton" type="submit" class="mt-2 px-4 py-2 text-white bg-blue-darkest">Post</button>
+<button data-target="posts.runCommandButton" type="submit" class="mt-2 px-4 py-2 text-white bg-green-darker hidden">Run</button>
 </form>
 `)
 }
