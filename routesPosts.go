@@ -284,7 +284,8 @@ func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 
 <div class="mt-4">
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
-	<button data-action="posts#beginReply" class="px-2 py-1 bg-grey-lighter"> ↩︎</button>
+	<button data-action="posts#beginReply" class="px-2 py-1 text-grey-darkest bg-grey-lighter"> ↩︎</button>
+	<button data-action="posts#addToFaves" class="px-2 py-1 text-grey-darkest bg-grey-lighter"> ☆</button>
 </div>
 
 <div data-target="posts.replies">
