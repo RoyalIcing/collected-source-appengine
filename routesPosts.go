@@ -328,6 +328,34 @@ func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 `)
 }
 
+func viewDeveloperSectionForPostsInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
+	w.WriteString(`
+<details class="mb-4">
+<summary class="italic cursor-pointer">Developer</summary>
+<pre class="mt-2 p-2 bg-black text-white"><code>{
+  channel(slug: "` + vars.channelSlug() + `") {
+    slug
+    posts {
+      totalCount
+      edges {
+        node {
+          id
+          content {
+            source
+            mediaType {
+              baseType
+              subtype
+            }
+          }
+        }
+      }
+    }
+  }
+}</code></pre>
+</details>
+`)
+}
+
 func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 	vars := routeVarsFrom(r)
@@ -346,6 +374,7 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
+		viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
 		sw.WriteString(`<div data-controller="posts">`)
 		viewCreatePostFormInChannelHTMLHandle(vars, sw)
 		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
@@ -393,6 +422,7 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
+		viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
 
 		defer viewCreatePostFormInChannelHTMLHandle(vars, sw)
 
