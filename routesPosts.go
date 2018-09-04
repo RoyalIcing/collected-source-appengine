@@ -195,6 +195,10 @@ app.register('posts', class extends Stimulus.Controller {
 	})
 }
 
+func viewErrorMessage(errorMessage string, w *bufio.Writer) {
+	w.WriteString(`<p class="py-1 px-2 bg-white text-red">` + errorMessage + "</p>")
+}
+
 func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
 	w.WriteString(fmt.Sprintf(`
 <h1 class="%s mb-4">
@@ -386,22 +390,24 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		MarkdownSource:       r.PostFormValue("markdownSource"),
 	}
 
-	_, err := channelsRepo.CreatePost(input)
-	if err != nil {
-		io.WriteString(w, "Error creating post: "+err.Error())
-		return
-	}
-
-	posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
-	if err != nil {
-		io.WriteString(w, "Error listing posts: "+err.Error())
-		return
-	}
-
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
-		viewCreatePostFormInChannelHTMLHandle(vars, sw)
+
+		defer viewCreatePostFormInChannelHTMLHandle(vars, sw)
+
+		_, err := channelsRepo.CreatePost(input)
+		if err != nil {
+			viewErrorMessage("Error creating post: "+err.Error(), sw)
+			return
+		}
+
+		posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
+		if err != nil {
+			viewErrorMessage("Error listing posts: "+err.Error(), sw)
+			return
+		}
+
 		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
 	})
 }
