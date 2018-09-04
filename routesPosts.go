@@ -408,6 +408,6 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
+		defer viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
 	})
 }
