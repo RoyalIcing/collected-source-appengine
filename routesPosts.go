@@ -331,7 +331,7 @@ func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 func viewDeveloperSectionForPostsInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
 <details class="mb-4">
-<summary class="italic cursor-pointer">Developer</summary>
+<summary class="italic cursor-pointer text-sm">Developer</summary>
 <pre class="mt-2 p-2 bg-black text-white"><code>{
   channel(slug: "` + vars.channelSlug() + `") {
     slug
