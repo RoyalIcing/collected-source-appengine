@@ -400,7 +400,7 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
-		sw.WriteString("<h1>💬 " + vars.channelSlug() + "</h1>")
+		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
 		viewCreatePostFormInChannelHTMLHandle(vars, sw)
 		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
 	})
