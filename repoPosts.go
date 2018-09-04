@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/file"
 )
 
 const (
@@ -46,8 +50,9 @@ type Post struct {
 	Key           *datastore.Key `datastore:",omitempty" json:"id"`
 	ParentPostKey *datastore.Key `json:"parentPostID"`
 	//AuthorID string            `json:"authorID"`
-	Content MarkdownDocument `json:"content"`
-	Replies *[]Post          `datastore:"-" json:"replies"`
+	Content           MarkdownDocument `json:"content"`
+	ContentStorageKey string
+	Replies           *[]Post `datastore:"-" json:"replies"`
 }
 
 // ChannelsRepo lets you query the channels repository
@@ -120,6 +125,24 @@ type CreatePostInput struct {
 	MarkdownSource       string
 }
 
+func objectForPostContentStorage(ctx context.Context, contentStorageKey string) (*storage.ObjectHandle, error) {
+	bucketName, err := file.DefaultBucketName(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("No default bucket found")
+	}
+	log.Printf("BUCKET NAME %s\n", bucketName)
+
+	storageClient, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot make client to post content storage")
+	}
+
+	bucket := storageClient.Bucket(bucketName)
+	object := bucket.Object(contentStorageKey)
+
+	return object, nil
+}
+
 // CreatePost creates a new post
 func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
 	var err error
@@ -145,6 +168,33 @@ func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
 		Content:       markdownDocument,
 		CreatedAt:     time.Now().UTC(),
 	}
+
+	if len(markdownDocument.Source) >= 1500 {
+		i, _, err := datastore.AllocateIDs(repo.ctx, "PostContentStorageKey", channelContentKey, 1)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot allocate ID for post content")
+		}
+
+		contentStorageKey := channelContentKey.Encode() + string(i)
+		object, err := objectForPostContentStorage(repo.ctx, contentStorageKey)
+		if err != nil {
+			return nil, err
+		}
+
+		writer := object.NewWriter(repo.ctx)
+		writer.ContentType = "text/markdown"
+		_, writeErr := io.WriteString(writer, post.Content.Source)
+		if writeErr != nil {
+			return nil, writeErr
+		}
+		if err := writer.Close(); err != nil {
+			return nil, err
+		}
+
+		post.Content.Source = ""
+		post.ContentStorageKey = contentStorageKey
+	}
+
 	postKey, err = datastore.Put(repo.ctx, postKey, &post)
 	if err != nil {
 		return nil, err
@@ -153,6 +203,30 @@ func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
 	post.Key = postKey
 
 	return &post, nil
+}
+
+func readPostContentFromStorageIfNeeded(ctx context.Context, post *Post) {
+	if post.ContentStorageKey == "" {
+		return
+	}
+
+	object, err := objectForPostContentStorage(ctx, post.ContentStorageKey)
+	if err != nil {
+		return
+	}
+
+	r, err := object.NewReader(ctx)
+	if err != nil {
+		return
+	}
+
+	bytes, err := ioutil.ReadAll(r)
+	r.Close()
+	if err != nil {
+		return
+	}
+
+	post.Content.Source = string(bytes)
 }
 
 // GetPostWithIDInChannel lists all post in a channel of a certain slug
@@ -170,6 +244,8 @@ func (repo ChannelsRepo) GetPostWithIDInChannel(channelSlug string, postID strin
 
 	post.Key = postKey
 
+	readPostContentFromStorageIfNeeded(repo.ctx, &post)
+
 	return &post, nil
 }
 
@@ -186,8 +262,8 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 	q := datastore.NewQuery(postType).Ancestor(channelContentKey).Limit(limit).Order("-CreatedAt")
 	posts := make([]Post, 0, limit)
 	replies := make(map[string][]Post)
-	var currentPost Post
 	for i := q.Run(repo.ctx); ; {
+		var currentPost Post
 		key, err := i.Next(&currentPost)
 		if err == datastore.Done {
 			break
@@ -197,6 +273,8 @@ func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) 
 		}
 
 		currentPost.Key = key
+
+		readPostContentFromStorageIfNeeded(repo.ctx, &currentPost)
 
 		if currentPost.ParentPostKey != nil {
 			replies[currentPost.ParentPostKey.Encode()] = append(replies[currentPost.ParentPostKey.Encode()], currentPost)

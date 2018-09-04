@@ -9,26 +9,5 @@ indexes:
 - kind: "Post"
   ancestor: yes
   properties:
-  - name: "__key__"
-    direction: desc
-- kind: "Post"
-  ancestor: yes
-  properties:
-  - name: "dateCreated"
-    direction: desc
-- kind: "Post"
-  ancestor: yes
-  properties:
-  - name: "DateCreated"
-    direction: desc
-- kind: "Post"
-  ancestor: yes
-  properties:
-  - name: "CreatedAt"
-    direction: desc
-- kind: "Post"
-  ancestor: yes
-  properties:
-  - name: "ParentPostKey"
   - name: "CreatedAt"
     direction: desc
