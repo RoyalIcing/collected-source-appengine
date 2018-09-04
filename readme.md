@@ -26,6 +26,8 @@ GITHUB_REDIRECT_URL = "http://localhost:8080/signin/github/callback"
 
 ### 3. Run `make dev`. You server will be available at <http://localhost:8080/>
 
+### 4. Open <http://localhost:8000/datastore> to see the local development database.
+
 ## Deploying
 
 ### 1. Copy **app.yaml** to a **app.prod.yaml** file, and add:
