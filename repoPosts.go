@@ -145,6 +145,10 @@ func objectForPostContentStorage(ctx context.Context, contentStorageKey string) 
 
 // CreatePost creates a new post
 func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
+	if input.MarkdownSource == "" {
+		return nil, fmt.Errorf("Post content cannot be empty.")
+	}
+
 	var err error
 
 	channelContentKey := repo.channelContentKeyFor(input.ChannelSlug)
