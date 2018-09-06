@@ -53,6 +53,7 @@ type Post struct {
 	Content           MarkdownDocument `json:"content"`
 	ContentStorageKey string
 	Replies           *[]Post `datastore:"-" json:"replies"`
+	CommandType       string  `json:"commandType"`
 }
 
 // ChannelsRepo lets you query the channels repository
@@ -123,6 +124,7 @@ type CreatePostInput struct {
 	ChannelSlug          string
 	ParentPostKeyEncoded *string
 	MarkdownSource       string
+	CommandType          string
 }
 
 func objectForPostContentStorage(ctx context.Context, contentStorageKey string) (*storage.ObjectHandle, error) {
@@ -171,6 +173,7 @@ func (repo ChannelsRepo) CreatePost(input CreatePostInput) (*Post, error) {
 		ParentPostKey: parentPostKey,
 		Content:       markdownDocument,
 		CreatedAt:     time.Now().UTC(),
+		CommandType:   input.CommandType,
 	}
 
 	if len(markdownDocument.Source) >= 1500 {

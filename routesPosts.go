@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	// "golang.org/x/net/html"
 	"html/template"
 
 	"github.com/gorilla/mux"
@@ -284,8 +285,13 @@ func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 
 <div class="mt-4">
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
-	<button data-action="posts#beginReply" class="px-2 py-1 text-grey-darkest bg-grey-lighter"> ↩︎</button>
-	<button data-action="posts#addToFaves" class="px-2 py-1 text-grey-darkest bg-grey-lighter"> ☆</button>
+	<div class="flex row justify-between">
+		<div></div>
+		<div class="flex row border border-grey-light rounded">
+			<button data-action="posts#beginReply" class="px-2 py-1 text-grey-darkest"> ↩︎</button>
+			<button data-action="posts#addToFaves" class="px-2 py-1 text-grey-darkest border-l border-grey-light"> ☆</button>
+		</div>
+	</div>
 </div>
 
 <div data-target="posts.replies">
@@ -334,8 +340,8 @@ func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
 <form data-target="posts.createForm" method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
 <textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-blue rounded"></textarea>
-<button data-target="posts.submitPostButton" type="submit" class="mt-2 px-4 py-2 text-white bg-blue-darkest">Post</button>
-<button data-target="posts.runCommandButton" type="submit" class="mt-2 px-4 py-2 text-white bg-green-darker hidden">Run</button>
+<button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darkest border border-blue-darkest">Post</button>
+<button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark hidden">Run</button>
 </form>
 `)
 }
@@ -415,6 +421,19 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		sw.WriteString(`<div data-controller="posts">`)
 		viewPostInChannelHTMLHandle(*post, channelViewModel, sw)
 		sw.WriteString(`</div>`)
+
+		if post.CommandType != "" {
+			command, err := ParseCommandInput(post.Content.Source)
+			if err == nil {
+				sw.WriteString(`<hr>`)
+				result, err := command.Run(ctx)
+				if err != nil {
+					sw.WriteString(err.Error())
+				} else {
+					sw.WriteString(SafeHTMLForCommandResult(result))
+				}
+			}
+		}
 	})
 }
 
@@ -425,10 +444,18 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
+	action := r.PostFormValue("action")
+
+	commandType := ""
+	if action == "runCommand" {
+		commandType = "v0"
+	}
+
 	input := CreatePostInput{
 		ChannelSlug:          vars.channelSlug(),
 		ParentPostKeyEncoded: vars.optionalPostID(),
 		MarkdownSource:       r.PostFormValue("markdownSource"),
+		CommandType:          commandType,
 	}
 
 	channelViewModel := vars.ToChannelViewModel()
