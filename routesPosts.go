@@ -324,6 +324,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{template "reply" .}}
 {{end}}
 </div>
+
 </div>
 {{end}}
 
@@ -346,6 +347,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{template "reply" .}}
 {{end}}
 </div>
+
 </div>
 {{end}}
 `))
@@ -447,8 +449,14 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
+
 		sw.WriteString(`<div data-controller="posts">`)
 		viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
+
+		sw.WriteString(`<div class="hidden">`)
+		viewCreatePostFormInChannelHTMLHandle(vars, sw)
+		sw.WriteString(`</div>`)
+
 		sw.WriteString(`</div>`)
 	})
 }
