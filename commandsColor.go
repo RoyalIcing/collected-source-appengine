@@ -46,6 +46,13 @@ func (cmd *ColorCommand) Run(ctx context.Context) (CommandResult, error) {
 
 	var htmlBuffer bytes.Buffer
 	htmlBuffer.WriteString(`<div style="width: 12em; height: 12em; background-color:` + hex + `"></div>`)
+	htmlBuffer.WriteString(`<dl class="mt-4">`)
+	htmlBuffer.WriteString(fmt.Sprintf(`<dt class="mt-2 font-bold">Hex</dt><dd>%s</dd>`, hex))
+	red, green, blue := cmd.Color.RGB255()
+	htmlBuffer.WriteString(fmt.Sprintf(`<dt class="mt-2 font-bold">sRGB</dt><dd>rgb(%v, %v, %v)</dd>`, red, green, blue))
+	l, a, b := cmd.Color.Lab()
+	htmlBuffer.WriteString(fmt.Sprintf(`<dt class="mt-2 font-bold">Lab</dt><dd>lab(%v %v %v)</dd>`, l, a, b))
+	htmlBuffer.WriteString(`</dl>`)
 
 	result := DangerousHTMLCommandResultFromSafe(htmlBuffer.String())
 
