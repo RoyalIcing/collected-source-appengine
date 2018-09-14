@@ -32,7 +32,6 @@ func (v RouteVars) optionalPostID() *string {
 	postID, ok := v.vars["postID"]
 	if ok {
 		return &postID
-	} else {
-		return nil
 	}
+	return nil
 }
