@@ -49,5 +49,9 @@ func parseCommand(commands []string, params string) (Command, error) {
 		return ParseWebCommand(commands[1:], params)
 	}
 
+	if commands[0] == "color" && len(commands) >= 2 {
+		return ParseColorCommand(commands[1:], params)
+	}
+
 	return nil, fmt.Errorf("Unknown command %v", commands)
 }

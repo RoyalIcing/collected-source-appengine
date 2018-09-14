@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -218,7 +219,11 @@ func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
 `, fontSize, m.HTMLPostsURL(), m.ChannelSlug))
 }
 
-func makeViewPostTemplate(m ChannelViewModel) *template.Template {
+func htmlError(err error) template.HTML {
+	return template.HTML(`<p>` + template.HTMLEscapeString(err.Error()) + `</p>`)
+}
+
+func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Template {
 	t := template.New("post").Funcs(template.FuncMap{
 		"postURL": func(postID string) string {
 			return m.HTMLPostURL(postID)
@@ -234,6 +239,22 @@ func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 		},
 		"displayTime": func(t time.Time) string {
 			return t.Format(time.RFC822)
+		},
+		"displayCommandResult": func(post Post) template.HTML {
+			if post.CommandType != "" {
+				command, err := ParseCommandInput(post.Content.Source)
+				if err == nil {
+					result, err := command.Run(ctx)
+					if err != nil {
+						return htmlError(err)
+					} else {
+						return template.HTML(`<hr>` + SafeHTMLForCommandResult(result))
+					}
+				} else {
+					return htmlError(err)
+				}
+			}
+			return ""
 		},
 	})
 	t = template.Must(t.Parse(`
@@ -269,6 +290,10 @@ func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 <p class="text-xl whitespace-pre-wrap">
 {{formatMarkdown .Content.Source}}
 </p>
+{{end}}
+
+{{define "commandResult"}}
+{{displayCommandResult .}}
 {{end}}
 
 {{define "reply"}}
@@ -307,6 +332,10 @@ func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 {{template "topBarLarge" .}}
 {{template "contentLarge" .}}
 
+<div>
+{{template "commandResult" .}}
+</div>
+
 <div class="mt-4">
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
 	<button data-action="posts#beginReply" class="px-2 py-1 bg-grey-lighter"> ↩︎</button>
@@ -324,13 +353,13 @@ func makeViewPostTemplate(m ChannelViewModel) *template.Template {
 	return t
 }
 
-func viewPostInChannelHTMLHandle(post Post, m ChannelViewModel, w *bufio.Writer) {
-	t := makeViewPostTemplate(m)
+func viewPostInChannelHTMLHandle(ctx context.Context, post Post, m ChannelViewModel, w *bufio.Writer) {
+	t := makeViewPostTemplate(ctx, m)
 	t.ExecuteTemplate(w, "postIndividual", post)
 }
 
-func viewPostsInChannelHTMLHandle(posts []Post, m ChannelViewModel, w *bufio.Writer) {
-	t := makeViewPostTemplate(m)
+func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelViewModel, w *bufio.Writer) {
+	t := makeViewPostTemplate(ctx, m)
 	for _, post := range posts {
 		t.ExecuteTemplate(w, "postInList", post)
 	}
@@ -395,7 +424,7 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
 		sw.WriteString(`<div data-controller="posts">`)
 		viewCreatePostFormInChannelHTMLHandle(vars, sw)
-		viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
+		viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
 		sw.WriteString(`</div>`)
 	})
 }
@@ -419,21 +448,8 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
 		viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
 		sw.WriteString(`<div data-controller="posts">`)
-		viewPostInChannelHTMLHandle(*post, channelViewModel, sw)
+		viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
 		sw.WriteString(`</div>`)
-
-		if post.CommandType != "" {
-			command, err := ParseCommandInput(post.Content.Source)
-			if err == nil {
-				sw.WriteString(`<hr>`)
-				result, err := command.Run(ctx)
-				if err != nil {
-					sw.WriteString(err.Error())
-				} else {
-					sw.WriteString(SafeHTMLForCommandResult(result))
-				}
-			}
-		}
 	})
 }
 
@@ -477,6 +493,6 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		defer viewPostsInChannelHTMLHandle(posts, channelViewModel, sw)
+		defer viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
 	})
 }

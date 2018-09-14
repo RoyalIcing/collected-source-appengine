@@ -84,7 +84,7 @@ func (cmd *WebSnippetCommand) Run(ctx context.Context) (CommandResult, error) {
 		htmlBuffer.WriteString("<br>")
 	}
 
-	result := HTMLCommandResult{htmlBuffer.String()}
+	result := HTMLCommandResultFromUnsafe(htmlBuffer.String())
 
 	return result, nil
 }
