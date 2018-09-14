@@ -30,7 +30,7 @@ type HTMLCommandResult struct {
 	isActuallySafe bool
 }
 
-// HTMLCommandResult makes a result fronm unsafe HTML
+// HTMLCommandResultFromUnsafe makes a result fronm unsafe HTML
 func HTMLCommandResultFromUnsafe(unsafeHTML string) HTMLCommandResult {
 	return HTMLCommandResult{unsafeHTML, false}
 }
