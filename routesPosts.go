@@ -161,7 +161,7 @@ func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
 <script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
 </head>
-<body class="bg-blue-light">
+<body class="bg-grey-lightest">
 `)
 
 		if formErr != nil {
@@ -177,16 +177,16 @@ document.addEventListener("DOMContentLoaded", () => {
 const app = Stimulus.Application.start();
 
 app.register('posts', class extends Stimulus.Controller {
-  static get targets() {
+	static get targets() {
 		return [ 'post', 'replyHolder' ];
 	}
 
-  beginReply({ target: button }) {
+	beginReply({ target: button }) {
 		const post = button.parentElement;
 		const createReplyForm = post.querySelector('[data-target="posts.createReplyForm"]');
 		const createForm = this.targets.find('createForm'); // this.createFormTarget;
 		createReplyForm.innerHTML = createForm.innerHTML;
-    //this.replyFieldTarget.textContent = "This is my reply"
+		//this.replyFieldTarget.textContent = "This is my reply"
 	}
 	
 	markdownInputChanged({ target: textarea }) {
@@ -199,6 +199,29 @@ app.register('posts', class extends Stimulus.Controller {
 		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
 	}
 });
+
+app.register('developer', class extends Stimulus.Controller {
+	static get targets() {
+		return [ 'queryCode' ];
+	}
+
+	runQuery({ target: button }) {
+		const queryCodeEl = this.targets.find('queryCode'); // this.queryCodeTarget;
+		const resultEl = this.targets.find('result');
+		resultEl.textContent = "Loading…";
+		fetch('/graphql', {
+			method: 'POST',
+			body: JSON.stringify({
+				query: queryCodeEl.textContent
+			})
+		})
+			.then(res => res.json())
+			.then(json => {
+				resultEl.textContent = JSON.stringify(json, null, 2);
+			});
+	}
+});
+
 });
 </script>
 `)
@@ -213,9 +236,11 @@ func viewErrorMessage(errorMessage string, w *bufio.Writer) {
 
 func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
 	w.WriteString(fmt.Sprintf(`
-<h1 class="%s mb-4">
-<a href="%s" class="text-black no-underline hover:underline">💬 %s</a>
+<header class="mb-4">
+<h1 class="%s">
+<a href="%s" class="text-blue no-underline hover:underline">💬 %s</a>
 </h1>
+</header>
 `, fontSize, m.HTMLPostsURL(), m.ChannelSlug))
 }
 
@@ -304,7 +329,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{end}}
 
 {{define "postInList"}}
-<div class="p-4 pb-6 bg-white border-b border-blue-light" data-target="posts.post">
+<div class="p-4 pb-6 bg-white border-b border-grey-light shadow-md" data-target="posts.post">
 {{template "topBar" .}}
 {{template "content" .}}
 
@@ -370,38 +395,52 @@ func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelVi
 func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
 <form data-target="posts.createForm" method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
-<textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-blue rounded"></textarea>
+<textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-grey rounded shadow-inner"></textarea>
+<div class="flex flex-row-reverse">
 <button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darkest border border-blue-darkest">Post</button>
 <button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark hidden">Run</button>
+</div>
 </form>
 `)
 }
 
 func viewDeveloperSectionForPostsInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
+	query := strings.Replace(`{
+	channel(slug: "`+vars.channelSlug()+`") {
+		slug
+		posts {
+			totalCount
+			edges {
+				node {
+					id
+					content {
+						source
+						mediaType {
+							baseType
+							subtype
+						}
+					}
+				}
+			}
+		}
+	}
+}`, "\t", "  ", -1)
+
 	w.WriteString(`
+<div data-controller="developer">
 <details class="mb-4">
-<summary class="italic cursor-pointer text-sm">Developer</summary>
-<pre class="mt-2 p-2 bg-black text-white"><code>{
-  channel(slug: "` + vars.channelSlug() + `") {
-    slug
-    posts {
-      totalCount
-      edges {
-        node {
-          id
-          content {
-            source
-            mediaType {
-              baseType
-              subtype
-            }
-          }
-        }
-      }
-    }
-  }
-}</code></pre>
+	<summary class="p-1 italic cursor-pointer text-center text-sm text-grey-dark bg-grey-lighter">Developer</summary>
+	<div class="max-h-screen overflow-auto bg-green-darkest">
+		<div class="flex row">
+			<pre class="w-1/2 p-2 bg-blue-darkest text-white"><code data-target="developer.queryCode">` + query + `</code></pre>
+			<div class="w-1/2">
+				<button data-action="developer#runQuery" class="mb-2 px-4 py-2 font-bold text-blue-darkest bg-white border border-blue-darkest">Query</button>
+				<pre class="p-2 text-white"><code data-target="developer.result"></code></pre>
+			</div>
+		</div>
+	</div>
 </details>
+</div>
 `)
 }
 
@@ -421,13 +460,19 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
-		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
-		viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
-		sw.WriteString(`<div data-controller="posts">`)
-		viewCreatePostFormInChannelHTMLHandle(vars, sw)
-		viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
-		sw.WriteString(`</div>`)
+	channelViewModel.Org.ViewPage2(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		viewSection(false, func(sw *bufio.Writer) {
+			viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
+		})
+		viewSection(true, func(sw *bufio.Writer) {
+			viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
+		})
+		viewSection(false, func(sw *bufio.Writer) {
+			sw.WriteString(`<div data-controller="posts">`)
+			viewCreatePostFormInChannelHTMLHandle(vars, sw)
+			viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
+			sw.WriteString(`</div>`)
+		})
 	})
 }
 

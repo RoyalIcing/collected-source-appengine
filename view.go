@@ -15,9 +15,9 @@ type OrgViewModel struct {
 // ViewNav renders the primary navigation
 func (m OrgViewModel) ViewNav(w *bufio.Writer) {
 	t := template.Must(template.New("nav").Parse(`
-<nav class="mb-8 text-white bg-blue-darkest">
+<nav class="mb-8 text-white bg-blue">
 <div class="max-w-md mx-auto flex flex-row">
-<strong class="py-4">{{.OrgSlug}}</strong>
+<strong class="py-1">{{.OrgSlug}}</strong>
 </div>
 </nav>
 `))
@@ -34,6 +34,28 @@ func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(w *bufio.Writer
 
 	sw.WriteString(`<main class="max-w-md mx-auto mt-6 mb-8">`)
 	viewMainContent(sw)
+	sw.WriteString(`</main>`)
+}
+
+// ViewPage2 renders a page with navigation and provided main content
+func (m OrgViewModel) ViewPage2(w io.Writer, viewMainContent func(section func(wide bool, viewInner func(w *bufio.Writer)))) {
+	sw := bufio.NewWriter(w)
+	defer sw.Flush()
+
+	m.ViewNav(sw)
+
+	section := func(wide bool, viewInner func(w *bufio.Writer)) {
+		if wide {
+			sw.WriteString(`<div class="mt-6 mb-8">`)
+		} else {
+			sw.WriteString(`<div class="max-w-md mx-auto mt-6 mb-8">`)
+		}
+		viewInner(sw)
+		sw.WriteString(`</div>`)
+	}
+
+	sw.WriteString(`<main>`)
+	viewMainContent(section)
 	sw.WriteString(`</main>`)
 }
 
