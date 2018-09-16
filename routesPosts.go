@@ -236,9 +236,9 @@ func viewErrorMessage(errorMessage string, w *bufio.Writer) {
 
 func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
 	w.WriteString(fmt.Sprintf(`
-<header class="mb-4">
+<header>
 <h1 class="%s">
-<a href="%s" class="text-blue no-underline hover:underline">💬 %s</a>
+<a href="%s" class="py-4 block text-blue no-underline hover:underline">💬 %s</a>
 </h1>
 </header>
 `, fontSize, m.HTMLPostsURL(), m.ChannelSlug))
@@ -329,7 +329,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{end}}
 
 {{define "postInList"}}
-<div class="p-4 pb-6 bg-white border-b border-grey-light shadow-md" data-target="posts.post">
+<div class="p-4 pb-6 bg-white border-b border-grey-dark shadow-md" data-target="posts.post">
 {{template "topBar" .}}
 {{template "content" .}}
 
@@ -395,7 +395,7 @@ func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelVi
 func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 	w.WriteString(`
 <form data-target="posts.createForm" method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
-<textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 border border-grey rounded shadow-inner"></textarea>
+<textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
 <div class="flex flex-row-reverse">
 <button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darkest border border-blue-darkest">Post</button>
 <button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark hidden">Run</button>
@@ -462,7 +462,7 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.Org.ViewPage2(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
 		viewSection(false, func(sw *bufio.Writer) {
-			viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
+			viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
 		})
 		viewSection(true, func(sw *bufio.Writer) {
 			viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
