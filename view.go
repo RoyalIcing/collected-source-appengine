@@ -26,19 +26,7 @@ func (m OrgViewModel) ViewNav(w *bufio.Writer) {
 }
 
 // ViewPage renders a page with navigation and provided main content
-func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(w *bufio.Writer)) {
-	sw := bufio.NewWriter(w)
-	defer sw.Flush()
-
-	m.ViewNav(sw)
-
-	sw.WriteString(`<main class="max-w-md mx-auto mt-6 mb-8">`)
-	viewMainContent(sw)
-	sw.WriteString(`</main>`)
-}
-
-// ViewPage2 renders a page with navigation and provided main content
-func (m OrgViewModel) ViewPage2(w io.Writer, viewMainContent func(section func(wide bool, viewInner func(w *bufio.Writer)))) {
+func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(section func(wide bool, viewInner func(w *bufio.Writer)))) {
 	sw := bufio.NewWriter(w)
 	defer sw.Flush()
 

@@ -392,9 +392,9 @@ func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelVi
 	}
 }
 
-func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
+func viewCreatePostFormInChannelHTMLHandle(channelViewModel ChannelViewModel, w *bufio.Writer) {
 	w.WriteString(`
-<form data-target="posts.createForm" method="post" action="/org:` + vars.orgSlug() + `/channel:` + vars.channelSlug() + `/posts" class="my-4">
+<form data-target="posts.createForm" method="post" action="` + channelViewModel.HTMLPostsURL() + `" class="my-4">
 <textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
 <div class="flex flex-row-reverse">
 <button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darkest border border-blue-darkest">Post</button>
@@ -404,9 +404,9 @@ func viewCreatePostFormInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
 `)
 }
 
-func viewDeveloperSectionForPostsInChannelHTMLHandle(vars RouteVars, w *bufio.Writer) {
+func viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel ChannelViewModel, w *bufio.Writer) {
 	query := strings.Replace(`{
-	channel(slug: "`+vars.channelSlug()+`") {
+	channel(slug: "`+channelViewModel.ChannelSlug+`") {
 		slug
 		posts {
 			totalCount
@@ -444,6 +444,22 @@ func viewDeveloperSectionForPostsInChannelHTMLHandle(vars RouteVars, w *bufio.Wr
 `)
 }
 
+func viewPostsInChannelHTMLPartial(ctx context.Context, errs []error, channelViewModel ChannelViewModel, posts []Post, viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+	viewSection(true, func(sw *bufio.Writer) {
+		viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
+		viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel, sw)
+	})
+
+	viewSection(false, func(sw *bufio.Writer) {
+		for _, err := range errs {
+			viewErrorMessage(err.Error(), sw)
+		}
+
+		viewCreatePostFormInChannelHTMLHandle(channelViewModel, sw)
+		viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
+	})
+}
+
 func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 	vars := routeVarsFrom(r)
@@ -457,22 +473,15 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(200)
-
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage2(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
-		viewSection(false, func(sw *bufio.Writer) {
-			viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
-		})
-		viewSection(true, func(sw *bufio.Writer) {
-			viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
-		})
-		viewSection(false, func(sw *bufio.Writer) {
-			sw.WriteString(`<div data-controller="posts">`)
-			viewCreatePostFormInChannelHTMLHandle(vars, sw)
-			viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
-			sw.WriteString(`</div>`)
-		})
+	channelViewModel.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		if err != nil {
+			viewSection(false, func(sw *bufio.Writer) {
+				viewErrorMessage("Error listing posts: "+err.Error(), sw)
+			})
+			return
+		}
+		viewPostsInChannelHTMLPartial(ctx, nil, channelViewModel, posts, viewSection)
 	})
 }
 
@@ -485,6 +494,7 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 	post, err := channelsRepo.GetPostWithIDInChannel(vars.channelSlug(), vars.postID())
 	if err != nil {
+		w.WriteHeader(500)
 		io.WriteString(w, "Error loading post: "+err.Error())
 		return
 	}
@@ -492,17 +502,21 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
-		viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
+	channelViewModel.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		viewSection(true, func(sw *bufio.Writer) {
+			viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
+		})
 
-		sw.WriteString(`<div data-controller="posts">`)
-		viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
+		viewSection(false, func(sw *bufio.Writer) {
+			sw.WriteString(`<div data-controller="posts">`)
+			viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
 
-		sw.WriteString(`<div class="hidden">`)
-		viewCreatePostFormInChannelHTMLHandle(vars, sw)
-		sw.WriteString(`</div>`)
+			sw.WriteString(`<div class="hidden">`)
+			viewCreatePostFormInChannelHTMLHandle(channelViewModel, sw)
+			sw.WriteString(`</div>`)
 
-		sw.WriteString(`</div>`)
+			sw.WriteString(`</div>`)
+		})
 	})
 }
 
@@ -526,26 +540,19 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		MarkdownSource:       r.PostFormValue("markdownSource"),
 		CommandType:          commandType,
 	}
+	_, errCreating := channelsRepo.CreatePost(input)
+
+	posts, errListing := channelsRepo.ListPostsInChannel(vars.channelSlug())
 
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage(w, func(sw *bufio.Writer) {
-		viewChannelHeader(channelViewModel, "text-4xl text-center", sw)
-		viewDeveloperSectionForPostsInChannelHTMLHandle(vars, sw)
-
-		defer viewCreatePostFormInChannelHTMLHandle(vars, sw)
-
-		_, err := channelsRepo.CreatePost(input)
-		if err != nil {
-			viewErrorMessage("Error creating post: "+err.Error(), sw)
-			return
+	channelViewModel.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		var errs []error
+		if errCreating != nil {
+			errs = append(errs, fmt.Errorf("Error creating post: %s", errCreating.Error()))
 		}
-
-		posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
-		if err != nil {
-			viewErrorMessage("Error listing posts: "+err.Error(), sw)
-			return
+		if errListing != nil {
+			errs = append(errs, fmt.Errorf("Error listing posts"))
 		}
-
-		defer viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
+		viewPostsInChannelHTMLPartial(ctx, errs, channelViewModel, posts, viewSection)
 	})
 }
