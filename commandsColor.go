@@ -99,10 +99,13 @@ func (cmd *ColorGradientCommand) Run(ctx context.Context) (CommandResult, error)
 		gradientStops = append(gradientStops, hex)
 	}
 
+	cssLinearGradient := `linear-gradient(` + strings.Join(gradientStops, ", ") + `)`
+
 	var htmlBuffer bytes.Buffer
-	htmlBuffer.WriteString(`<div style="width: 12em; height: 12em; background: linear-gradient(` + strings.Join(gradientStops, ",") + `)"></div>`)
+	htmlBuffer.WriteString(`<div style="width: 12em; height: 12em; background: ` + cssLinearGradient + `"></div>`)
 	htmlBuffer.WriteString(`<dl class="mt-4">`)
 	htmlBuffer.WriteString(fmt.Sprintf(`<dt class="mt-2 font-bold">Hex</dt><dd>%s</dd>`, strings.Join(gradientStops, ", ")))
+	htmlBuffer.WriteString(fmt.Sprintf(`<dt class="mt-2 font-bold">CSS Linear Gradient</dt><dd><code>%s</code></dd>`, cssLinearGradient))
 	htmlBuffer.WriteString(`</dl>`)
 
 	result := DangerousHTMLCommandResultFromSafe(htmlBuffer.String())
