@@ -273,7 +273,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 					if err != nil {
 						return htmlError(err)
 					} else {
-						return template.HTML(`<hr>` + SafeHTMLForCommandResult(result))
+						return template.HTML(`<hr class="mt-4 mb-4 border-b border-green">` + SafeHTMLForCommandResult(result))
 					}
 				} else {
 					return htmlError(err)
