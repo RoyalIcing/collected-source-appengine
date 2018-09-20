@@ -455,8 +455,10 @@ func viewPostsInChannelHTMLPartial(ctx context.Context, errs []error, channelVie
 			viewErrorMessage(err.Error(), sw)
 		}
 
+		sw.WriteString(`<div data-controller="posts">`)
 		viewCreatePostFormInChannelHTMLHandle(channelViewModel, sw)
 		viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
+		sw.WriteString(`</div>`)
 	})
 }
 
