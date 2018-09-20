@@ -160,6 +160,18 @@ func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 <meta charset="utf-8">
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
 <script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
+<style>
+.grid-1\/3-2\/3 {
+	display: grid;
+	grid-template-columns: 33.333% 66.667%;
+}
+.grid-column-gap-1 {
+	grid-column-gap: 0.25rem;
+}
+.grid-row-gap-1 {
+	grid-row-gap: 0.25rem;
+}
+</style>
 </head>
 <body class="bg-grey-lightest">
 `)
