@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"golang.org/x/net/html"
 	"google.golang.org/appengine/urlfetch"
@@ -126,21 +127,38 @@ func (cmd *WebMetaCommand) Run(ctx context.Context) (CommandResult, error) {
 		return nil, err
 	}
 
-	dom := doc.Clone()
-	metaTags := dom.Find("head meta")
-
-	htmlNodes := metaTags.Nodes
-
 	var htmlBuffer bytes.Buffer
 	htmlBuffer.WriteString(`<ol>`)
-	for _, node := range htmlNodes {
-		htmlBuffer.WriteString(`<li class="mb-2">`)
-		htmlBuffer.WriteString(`<dl class="grid-1/3-2/3 grid-column-gap-1 grid-row-gap-1">`)
-		for _, attr := range node.Attr {
-			htmlBuffer.WriteString(fmt.Sprintf(`<dt class="font-bold">%s</dt>`, html.EscapeString(attr.Key)))
-			htmlBuffer.WriteString(fmt.Sprintf(`<dd>%s</dd>`, html.EscapeString(attr.Val)))
+	titleTags := doc.Find("title")
+	for _, node := range titleTags.Nodes {
+		if node.FirstChild == nil {
+			break
 		}
-		htmlBuffer.WriteString(`</dl>`)
+		htmlBuffer.WriteString(`<div class="mb-2">`)
+		writeDescriptionList(&htmlBuffer, func(dl *descriptionListWriter) {
+			dl.key("title")
+			var valueElements []string
+			child := node.FirstChild
+			for child != nil {
+				if child.Type == html.TextNode {
+					valueElements = append(valueElements, child.Data)
+				}
+				child = child.NextSibling
+			}
+			dl.value(strings.Join(valueElements, ""))
+		})
+		htmlBuffer.WriteString(`</div>`)
+	}
+
+	metaTags := doc.Find("head meta")
+	for _, node := range metaTags.Nodes {
+		htmlBuffer.WriteString(`<li class="mb-2">`)
+		writeDescriptionList(&htmlBuffer, func(dl *descriptionListWriter) {
+			for _, attr := range node.Attr {
+				dl.key(attr.Key)
+				dl.value(attr.Val)
+			}
+		})
 		htmlBuffer.WriteString(`</li>`)
 	}
 	htmlBuffer.WriteString(`</ol>`)
