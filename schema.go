@@ -7,7 +7,54 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 )
 
-const schemaString = `
+const commandsSchemaString = `
+type CommandParams {
+	jsonEncoded: String
+}
+
+interface CommandResult {
+}
+
+interface Command {
+	subcommands: [String!]
+	params: CommandParams
+	result: CommandResult
+}
+
+
+type RGBColor {
+	colorSpaceName: String!
+	hex: String!
+	red8Bit: Int!
+	green8Bit: Int!
+	blue8Bit: Int!
+}
+
+type LabColor {
+	colorSpaceName: String!
+	l: Float!
+	a: Float!
+	b: Float!
+}
+
+type ColorCommandResult implements CommandResult {
+	srgb: RGBColor
+	lab: LabColor
+}
+
+type ColorCommand implements Command {
+	subcommands: [String!]
+	params: CommandParams
+
+	result: ColorCommandResult
+}
+
+type Commands {
+	color(input: String!): ColorCommand
+}
+`
+
+const schemaString = (`
 schema {
 	query: Query
 }
@@ -85,15 +132,24 @@ type Channel implements Node {
 
 	posts: PostsConnection
 }
-
-
+` + commandsSchemaString + `
 type Query {
 	hello: String!
 	channel(slug: String): Channel
 	#channel(): Channel
 	channels(): [Channel]
 }
-`
+
+type Mutation {
+	commands: Commands!
+}
+
+
+schema {
+	query: Query
+	mutation: Mutation
+}
+`)
 
 // ChannelsArgs is the arguments take by a Channels resolver
 type ChannelsArgs struct{}
@@ -140,4 +196,10 @@ func (r DataStoreResolver) Channel(ctx context.Context, args ChannelArgs) (*Chan
 // Channels resolved
 func (r DataStoreResolver) Channels(ctx context.Context /*, args ChannelsArgs*/) (*[]*Channel, error) {
 	return nil, fmt.Errorf("Not implemented")
+}
+
+// Commands resolved
+func (r DataStoreResolver) Commands(ctx context.Context) (*Commands, error) {
+	commands := Commands{}
+	return &commands, nil
 }
