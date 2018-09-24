@@ -158,6 +158,7 @@ func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
 <script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
 <style>
