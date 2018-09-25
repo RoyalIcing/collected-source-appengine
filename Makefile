@@ -9,3 +9,7 @@ dev_reset:
 deploy:
 	gcloud datastore indexes create index.yaml && \
 	gcloud app deploy app.prod.yaml --project "${PROJECT}"
+
+test_integration:
+	cd tests-integration && \
+	yarn test
