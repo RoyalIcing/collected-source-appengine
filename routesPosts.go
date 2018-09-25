@@ -333,18 +333,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{displayCommandResult .}}
 {{end}}
 
-{{define "reply"}}
-<div class="pt-4 pb-4 bg-white" data-target="posts.post">
-{{template "topBar" .}}
-{{template "content" .}}
-</div>
-{{end}}
-
-{{define "postInList"}}
-<div class="p-4 pb-6 bg-white border-b border-grey-dark shadow-md" data-target="posts.post">
-{{template "topBar" .}}
-{{template "content" .}}
-
+{{define "postActions"}}
 <div class="mt-4" data-target="posts.actions">
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
 	<div class="flex row justify-between">
@@ -355,6 +344,21 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 		</div>
 	</div>
 </div>
+{{end}}
+
+{{define "reply"}}
+<div class="pt-4 pb-4 bg-white" data-target="posts.post">
+{{template "topBar" .}}
+{{template "content" .}}
+{{template "postActions" .}}
+</div>
+{{end}}
+
+{{define "postInList"}}
+<div class="p-4 pb-6 bg-white border-b border-grey-dark shadow-md" data-target="posts.post">
+{{template "topBar" .}}
+{{template "content" .}}
+{{template "postActions" .}}
 
 <div data-target="posts.replies">
 {{range .Replies}}
