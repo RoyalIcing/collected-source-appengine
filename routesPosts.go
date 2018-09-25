@@ -195,11 +195,10 @@ app.register('posts', class extends Stimulus.Controller {
 	}
 
 	beginReply({ target: button }) {
-		const post = button.parentElement;
-		const createReplyForm = post.querySelector('[data-target="posts.createReplyForm"]');
+		const actions = button.closest('[data-target="posts.actions"]');
+		const createReplyForm = actions.querySelector('[data-target="posts.createReplyForm"]');
 		const createForm = this.targets.find('createForm'); // this.createFormTarget;
 		createReplyForm.innerHTML = createForm.innerHTML;
-		//this.replyFieldTarget.textContent = "This is my reply"
 	}
 	
 	markdownInputChanged({ target: textarea }) {
@@ -346,7 +345,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{template "topBar" .}}
 {{template "content" .}}
 
-<div class="mt-4">
+<div class="mt-4" data-target="posts.actions">
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
 	<div class="flex row justify-between">
 		<div></div>
