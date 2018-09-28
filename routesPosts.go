@@ -308,8 +308,9 @@ func viewCreatePostFormInChannelHTMLHandle(channelViewModel ChannelViewModel, w 
 <form data-target="posts.createForm" method="post" action="` + channelViewModel.HTMLPostsURL() + `" class="my-4">
 <textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
 <div class="flex flex-row-reverse">
-<button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darkest border border-blue-darkest">Post</button>
+<button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darker border border-blue-darker">Post</button>
 <button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark hidden">Run</button>
+<button type="submit" name="action" value="beginDraft" data-target="posts.beginDraftButton" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-dark hidden">Begin Draft</button>
 </div>
 </form>
 `)

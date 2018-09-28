@@ -40,14 +40,16 @@ app.register('posts', class extends Stimulus.Controller {
 		createReplyForm.innerHTML = createForm.innerHTML;
 	}
 	
-	markdownInputChanged({ target: textarea }) {
-		const isCommand = textarea.value[0] === '/';
-		this.changeSubmitMode(isCommand ? 'run' : 'submit');
+	markdownInputChanged({ target: { value } }) {
+		const isCommand = value[0] === '/';
+		const isMarkdownHeading = value[0] === '#' && value[1] === ' ';
+		this.changeSubmitMode(isCommand ? 'run' : isMarkdownHeading ? 'draft' : 'submit');
 	}
 
 	changeSubmitMode(mode) {
 		this.targets.find('submitPostButton').classList.toggle('hidden', mode !== 'submit');
 		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
+		this.targets.find('beginDraftButton').classList.toggle('hidden', mode !== 'draft');
 	}
 });
 {{end}}
