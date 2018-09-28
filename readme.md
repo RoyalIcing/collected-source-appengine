@@ -34,9 +34,9 @@ GITHUB_REDIRECT_URL = "http://localhost:8080/signin/github/callback"
 
 ```yaml
 env_variables:
-  GITHUB_CLIENT_ID: "…"
-  GITHUB_CLIENT_SECRET: "…"
-  GITHUB_REDIRECT_URL: "…/signin/github/callback"
+  GITHUB_CLIENT_ID: "Your client id from GitHub.com"
+  GITHUB_CLIENT_SECRET: "Your client secret from GitHub.com"
+  GITHUB_REDIRECT_URL: "https://YOURDOMAIN.COM/signin/github/callback"
 ```
 
 ### 2. Run `make deploy`
