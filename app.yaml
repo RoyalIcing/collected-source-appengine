@@ -12,5 +12,6 @@ skip_files:
 - .envrc
 - app.prod.yaml
 - check
+- tests-integration
 
 env_variables:
