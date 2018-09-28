@@ -5,15 +5,136 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"net/http"
 )
+
+func viewErrorMessage(errorMessage string, w *bufio.Writer) {
+	w.WriteString(`<p class="py-1 px-2 bg-white text-red">` + errorMessage + "</p>")
+}
+
+type htmlHandlerOptions struct {
+	form                   bool
+	dynamicElementsEnabled map[string]bool
+}
+
+func writeDynamicElementsScript(w http.ResponseWriter, dynamicElementsEnabled map[string]bool) {
+	if len(dynamicElementsEnabled) == 0 {
+		return
+	}
+
+	t := template.Must(template.New("dynamicElementsScript").Parse(`
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+const app = Stimulus.Application.start();
+
+{{if .posts}}
+app.register('posts', class extends Stimulus.Controller {
+	static get targets() {
+		return [ 'post', 'replyHolder' ];
+	}
+
+	beginReply({ target: button }) {
+		const actions = button.closest('[data-target="posts.actions"]');
+		const createReplyForm = actions.querySelector('[data-target="posts.createReplyForm"]');
+		const createForm = this.targets.find('createForm'); // this.createFormTarget;
+		createReplyForm.innerHTML = createForm.innerHTML;
+	}
+	
+	markdownInputChanged({ target: textarea }) {
+		const isCommand = textarea.value[0] === '/';
+		this.changeSubmitMode(isCommand ? 'run' : 'submit');
+	}
+
+	changeSubmitMode(mode) {
+		this.targets.find('submitPostButton').classList.toggle('hidden', mode !== 'submit');
+		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
+	}
+});
+{{end}}
+{{if .developer}}
+app.register('developer', class extends Stimulus.Controller {
+	static get targets() {
+		return [ 'queryCode' ];
+	}
+
+	runQuery({ target: button }) {
+		const queryCodeEl = this.targets.find('queryCode'); // this.queryCodeTarget;
+		const resultEl = this.targets.find('result');
+		resultEl.textContent = "Loading…";
+		fetch('/graphql', {
+			method: 'POST',
+			body: JSON.stringify({
+				query: queryCodeEl.textContent
+			})
+		})
+			.then(res => res.json())
+			.then(json => {
+				resultEl.textContent = JSON.stringify(json, null, 2);
+			});
+	}
+});
+{{end}}
+
+});
+</script>
+`))
+
+	t.Execute(w, dynamicElementsEnabled)
+}
+
+func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := w.Header()
+		header.Set("Content-Type", "text/html; charset=utf-8")
+		header.Set("X-Content-Type-Options", "nosniff")
+
+		var formErr error
+		if options.form {
+			formErr = r.ParseForm()
+		}
+
+		io.WriteString(w, `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
+<script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
+<style>
+.grid-1\/3-2\/3 {
+	display: grid;
+	grid-template-columns: 33.333% 66.667%;
+}
+.grid-column-gap-1 {
+	grid-column-gap: 0.25rem;
+}
+.grid-row-gap-1 {
+	grid-row-gap: 0.25rem;
+}
+</style>
+</head>
+<body class="bg-grey-lightest">
+`)
+
+		if formErr != nil {
+			w.WriteHeader(400)
+			io.WriteString(w, "Invalid form request: "+formErr.Error())
+		} else {
+			f(w, r)
+		}
+
+		writeDynamicElementsScript(w, options.dynamicElementsEnabled)
+
+		io.WriteString(w, "</body></html>")
+	})
+}
 
 // OrgViewModel models viewing an org
 type OrgViewModel struct {
 	OrgSlug string
 }
 
-// ViewNav renders the primary navigation
-func (m OrgViewModel) ViewNav(w *bufio.Writer) {
+func (m OrgViewModel) viewNav(w *bufio.Writer) {
 	t := template.Must(template.New("nav").Parse(`
 <nav class="text-white bg-black">
 <div class="max-w-md mx-auto flex flex-row">
@@ -30,7 +151,7 @@ func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(section func(wi
 	sw := bufio.NewWriter(w)
 	defer sw.Flush()
 
-	m.ViewNav(sw)
+	m.viewNav(sw)
 
 	section := func(wide bool, viewInner func(w *bufio.Writer)) {
 		if wide {

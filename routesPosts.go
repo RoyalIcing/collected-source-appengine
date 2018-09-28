@@ -32,13 +32,13 @@ func AddPostsRoutes(r *mux.Router) {
 		HandlerFunc(createPostInChannelHandle)
 
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
-		HandlerFunc(withHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{}))
+		HandlerFunc(WithHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}").Methods("GET").
-		HandlerFunc(withHTMLTemplate(showPostInChannelHTMLHandle, htmlHandlerOptions{}))
+		HandlerFunc(WithHTMLTemplate(showPostInChannelHTMLHandle, htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
-		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
+		HandlerFunc(WithHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}/posts").Methods("POST").
-		HandlerFunc(withHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
+		HandlerFunc(WithHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true}))
 }
 
 func getChannelInfoHandle(w http.ResponseWriter, r *http.Request) {
@@ -137,113 +137,6 @@ func createPostInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, post)
-}
-
-type htmlHandlerOptions struct {
-	form bool
-}
-
-func withHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := w.Header()
-		header.Set("Content-Type", "text/html; charset=utf-8")
-		header.Set("X-Content-Type-Options", "nosniff")
-
-		var formErr error
-		if options.form {
-			formErr = r.ParseForm()
-		}
-
-		io.WriteString(w, `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
-<script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
-<style>
-.grid-1\/3-2\/3 {
-	display: grid;
-	grid-template-columns: 33.333% 66.667%;
-}
-.grid-column-gap-1 {
-	grid-column-gap: 0.25rem;
-}
-.grid-row-gap-1 {
-	grid-row-gap: 0.25rem;
-}
-</style>
-</head>
-<body class="bg-grey-lightest">
-`)
-
-		if formErr != nil {
-			w.WriteHeader(400)
-			io.WriteString(w, "Invalid form request: "+formErr.Error())
-		} else {
-			f(w, r)
-		}
-
-		io.WriteString(w, `
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-const app = Stimulus.Application.start();
-
-app.register('posts', class extends Stimulus.Controller {
-	static get targets() {
-		return [ 'post', 'replyHolder' ];
-	}
-
-	beginReply({ target: button }) {
-		const actions = button.closest('[data-target="posts.actions"]');
-		const createReplyForm = actions.querySelector('[data-target="posts.createReplyForm"]');
-		const createForm = this.targets.find('createForm'); // this.createFormTarget;
-		createReplyForm.innerHTML = createForm.innerHTML;
-	}
-	
-	markdownInputChanged({ target: textarea }) {
-		const isCommand = textarea.value[0] === '/';
-		this.changeSubmitMode(isCommand ? 'run' : 'submit');
-	}
-
-	changeSubmitMode(mode) {
-		this.targets.find('submitPostButton').classList.toggle('hidden', mode !== 'submit');
-		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
-	}
-});
-
-app.register('developer', class extends Stimulus.Controller {
-	static get targets() {
-		return [ 'queryCode' ];
-	}
-
-	runQuery({ target: button }) {
-		const queryCodeEl = this.targets.find('queryCode'); // this.queryCodeTarget;
-		const resultEl = this.targets.find('result');
-		resultEl.textContent = "Loading…";
-		fetch('/graphql', {
-			method: 'POST',
-			body: JSON.stringify({
-				query: queryCodeEl.textContent
-			})
-		})
-			.then(res => res.json())
-			.then(json => {
-				resultEl.textContent = JSON.stringify(json, null, 2);
-			});
-	}
-});
-
-});
-</script>
-`)
-
-		io.WriteString(w, "</body></html>")
-	})
-}
-
-func viewErrorMessage(errorMessage string, w *bufio.Writer) {
-	w.WriteString(`<p class="py-1 px-2 bg-white text-red">` + errorMessage + "</p>")
 }
 
 func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {

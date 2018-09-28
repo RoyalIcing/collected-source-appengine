@@ -76,8 +76,8 @@ func init() {
 func main() {
 	r := mux.NewRouter()
 
-	r.Path("/").Methods("GET").
-		HandlerFunc(rootHandle)
+	// r.Path("/").Methods("GET").
+	// 	HandlerFunc(rootHandle)
 
 	r.Path("/user-credentials").Methods("POST").
 		HandlerFunc(createUserCredentialHandle)
@@ -86,6 +86,7 @@ func main() {
 	AddTrelloRoutes(r)
 	AddFigmaRoutes(r)
 
+	AddHTMLDashboardRoutes(r)
 	AddOrgsRoutes(r)
 	AddPostsRoutes(r)
 

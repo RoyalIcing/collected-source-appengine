@@ -49,6 +49,29 @@ type ColorCommand implements Command {
 	result: ColorCommandResult
 }
 
+
+type WebMetaCommandResultAttribute {
+	key: String
+	value: String
+}
+
+type WebMetaCommandResultMetaTag {
+	attributes: [WebMetaCommandResultAttribute!]
+}
+
+type WebMetaCommandResult implements CommandResult {
+	titles: [String!]
+	metaTags: [WebMetaCommandResultMetaTag!]
+}
+
+type WebMetaCommand implements Command {
+	subcommands: [String!]
+	params: CommandParams
+
+	result: ColorCommandResult
+}
+
+
 type Commands {
 	color(input: String!): ColorCommand
 }

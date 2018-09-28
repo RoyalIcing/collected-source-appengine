@@ -48,6 +48,20 @@ func WithSessionMgr(f SessHandlerFunc) http.HandlerFunc {
 	})
 }
 
+// WithViewer adds context.Context and Viewer as extra arguments to a http.HandlerFunc
+func WithViewer(f func(context.Context, *Viewer, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := appengine.NewContext(r)
+		sessmgr := GetSessionManager(ctx)
+		defer sessmgr.Close()
+
+		sess := sessmgr.Get(r)
+		viewer := NewViewer(ctx, sess)
+
+		f(ctx, viewer, w, r)
+	})
+}
+
 func writeJSON(w http.ResponseWriter, d interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 
