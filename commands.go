@@ -53,5 +53,9 @@ func parseCommand(commands []string, params string) (Command, error) {
 		return ParseColorCommand(commands[1:], params)
 	}
 
+	if commands[0] == "aws" && len(commands) >= 2 {
+		return ParseAWSCommand(commands[1:], params)
+	}
+
 	return nil, fmt.Errorf("Unknown command %v", commands)
 }
