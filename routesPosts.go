@@ -143,12 +143,15 @@ func createPostInChannelHandle(w http.ResponseWriter, r *http.Request) {
 
 func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
 	w.WriteString(fmt.Sprintf(`
-<header>
-<h1 class="%s">
-<a href="%s" class="py-4 block text-blue no-underline hover:underline">💬 %s</a>
-</h1>
+<header class="pt-4 pb-3 bg-indigo-darker">
+	<div class="max-w-md mx-auto flex row justify-between">
+		<h1 class="%s">
+			<a href="%s" class="text-white no-underline hover:underline">💬 %s</a>
+		</h1>
+		<input type="search" placeholder="Search %s" class="w-64 px-2 py-2 bg-indigo rounded">
+	</div>
 </header>
-`, fontSize, m.HTMLPostsURL(), m.ChannelSlug))
+`, fontSize, m.HTMLPostsURL(), m.ChannelSlug, m.ChannelSlug))
 }
 
 func htmlError(err error) template.HTML {
@@ -233,7 +236,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
 	<div class="flex row justify-between">
 		<div></div>
-		<div class="flex row border border-grey-light rounded">
+		<div class="flex row bg-grey-light border border-grey-light rounded">
 			<button data-action="posts#beginReply" class="px-2 py-1 text-grey-darkest"> ↩︎</button>
 			<button data-action="posts#addToFaves" class="px-2 py-1 text-grey-darkest border-l border-grey-light"> ☆</button>
 		</div>
@@ -340,14 +343,14 @@ func viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel ChannelVie
 
 	w.WriteString(`
 <div data-controller="developer">
-<details class="mb-4">
-	<summary class="p-1 italic cursor-pointer text-center text-sm text-grey-dark bg-grey-lighter">Developer</summary>
-	<div class="max-h-screen overflow-auto bg-green-darkest">
+<details class="mb-4 bg-indigo-darker">
+	<summary class="max-w-md mx-auto p-1 italic cursor-pointer text-right text-sm text-indigo-lighter bg-indigo-darker select-none">Developer</summary>
+	<div class="max-h-screen overflow-auto bg-yellow-lightest">
 		<div class="flex row">
-			<pre class="w-1/2 p-2 bg-blue-darkest text-white"><code data-target="developer.queryCode">` + query + `</code></pre>
+			<pre class="w-1/2 p-2 bg-indigo-lightest text-indigo-darkest"><code data-target="developer.queryCode">` + query + `</code></pre>
 			<div class="w-1/2">
-				<button data-action="developer#runQuery" class="mb-2 px-4 py-2 font-bold text-blue-darkest bg-white border border-blue-darkest">Query</button>
-				<pre class="p-2 text-white"><code data-target="developer.result"></code></pre>
+				<button data-action="developer#runQuery" class="mb-2 px-4 py-2 font-bold text-white bg-green-darker border border-green-darker">Query</button>
+				<pre class="p-2 text-green-darkest"><code data-target="developer.result"></code></pre>
 			</div>
 		</div>
 	</div>
