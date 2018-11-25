@@ -152,13 +152,13 @@ func (m OrgViewModel) viewNav(w *bufio.Writer) {
 }
 
 // ViewPage renders a page with navigation and provided main content
-func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(section func(wide bool, viewInner func(w *bufio.Writer)))) {
+func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(viewSection func(wide bool, viewInner func(w *bufio.Writer)))) {
 	sw := bufio.NewWriter(w)
 	defer sw.Flush()
 
 	m.viewNav(sw)
 
-	section := func(wide bool, viewInner func(w *bufio.Writer)) {
+	viewSection := func(wide bool, viewInner func(w *bufio.Writer)) {
 		if wide {
 			sw.WriteString(`<div class="">`)
 		} else {
@@ -169,7 +169,7 @@ func (m OrgViewModel) ViewPage(w io.Writer, viewMainContent func(section func(wi
 	}
 
 	sw.WriteString(`<main>`)
-	viewMainContent(section)
+	viewMainContent(viewSection)
 	sw.WriteString(`</main>`)
 }
 
@@ -200,6 +200,33 @@ func (m ChannelViewModel) HTMLPostURL(postID string) string {
 // HTMLPostChildPostsURL builds a URL to a post’s child posts web page
 func (m ChannelViewModel) HTMLPostChildPostsURL(postID string) string {
 	return fmt.Sprintf("/org:%s/channel:%s/posts/%s/posts", m.Org.OrgSlug, m.ChannelSlug, postID)
+}
+
+// ViewHeader renders the nav for a channel
+func (m ChannelViewModel) ViewHeader(fontSize string, w *bufio.Writer) {
+	w.WriteString(fmt.Sprintf(`
+<header class="pt-4 pb-3 bg-indigo-darker">
+	<div class="max-w-md mx-auto">
+		<div class="mx-2 md:mx-0 flex flex-wrap flex-col sm:flex-row items-center sm:items-start sm:justify-between">
+			<h1 class="%s min-w-full sm:min-w-0 mb-2 sm:mb-0">
+				<a href="%s" class="text-white no-underline hover:underline">💬 %s</a>
+			</h1>
+			<input type="search" placeholder="Search %s" class="w-64 px-2 py-2 bg-indigo rounded">
+		</div>
+	</div>
+</header>
+`, fontSize, m.HTMLPostsURL(), m.ChannelSlug, m.ChannelSlug))
+}
+
+// ViewPage renders a page with navigation and provided main content
+func (m ChannelViewModel) ViewPage(w io.Writer, viewMainContent func(viewSection func(wide bool, viewInner func(w *bufio.Writer)))) {
+	m.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		viewSection(true, func(sw *bufio.Writer) {
+			m.ViewHeader("text-2xl text-center", sw)
+		})
+
+		viewMainContent(viewSection)
+	})
 }
 
 // ToOrgViewModel converts route vars into OrgViewModel

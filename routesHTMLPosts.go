@@ -31,21 +31,6 @@ func AddHTMLPostsRoutes(r *mux.Router) {
 		HandlerFunc(WithHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true, dynamicElementsEnabled: dynamicElementsEnabled}))
 }
 
-func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
-	w.WriteString(fmt.Sprintf(`
-<header class="pt-4 pb-3 bg-indigo-darker">
-	<div class="max-w-md mx-auto">
-		<div class="mx-2 md:mx-0 flex flex-wrap flex-col sm:flex-row items-center sm:items-start sm:justify-between">
-			<h1 class="%s min-w-full sm:min-w-0 mb-2 sm:mb-0">
-				<a href="%s" class="text-white no-underline hover:underline">💬 %s</a>
-			</h1>
-			<input type="search" placeholder="Search %s" class="w-64 px-2 py-2 bg-indigo rounded">
-		</div>
-	</div>
-</header>
-`, fontSize, m.HTMLPostsURL(), m.ChannelSlug, m.ChannelSlug))
-}
-
 func htmlError(err error) template.HTML {
 	return template.HTML(`<p>` + template.HTMLEscapeString(err.Error()) + `</p>`)
 }
@@ -268,11 +253,6 @@ func viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel ChannelVie
 }
 
 func viewPostsInChannelHTMLPartial(ctx context.Context, errs []error, channelViewModel ChannelViewModel, posts []Post, viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
-	viewSection(true, func(sw *bufio.Writer) {
-		viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
-		viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel, sw)
-	})
-
 	viewSection(false, func(sw *bufio.Writer) {
 		for _, err := range errs {
 			viewErrorMessage(err.Error(), sw)
@@ -306,7 +286,11 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+	channelViewModel.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		viewSection(true, func(sw *bufio.Writer) {
+			viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel, sw)
+		})
+
 		if err != nil {
 			viewSection(false, func(sw *bufio.Writer) {
 				viewErrorMessage("Error listing posts: "+err.Error(), sw)
@@ -334,11 +318,7 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
-		viewSection(true, func(sw *bufio.Writer) {
-			viewChannelHeader(channelViewModel, "text-2xl text-center", sw)
-		})
-
+	channelViewModel.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
 		viewSection(false, func(sw *bufio.Writer) {
 			sw.WriteString(`<div data-controller="posts">`)
 
@@ -377,19 +357,25 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		MarkdownSource:       r.PostFormValue("markdownSource"),
 		CommandType:          commandType,
 	}
-	_, errCreating := channelsRepo.CreatePost(input)
 
-	posts, errListing := channelsRepo.ListPostsInChannel(vars.channelSlug())
+	var errs []error
+
+	_, err := channelsRepo.CreatePost(input)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Error creating post: %s", err.Error()))
+	}
+
+	posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Error listing posts"))
+	}
 
 	channelViewModel := vars.ToChannelViewModel()
-	channelViewModel.Org.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
-		var errs []error
-		if errCreating != nil {
-			errs = append(errs, fmt.Errorf("Error creating post: %s", errCreating.Error()))
-		}
-		if errListing != nil {
-			errs = append(errs, fmt.Errorf("Error listing posts"))
-		}
+	channelViewModel.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
+		viewSection(true, func(sw *bufio.Writer) {
+			viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel, sw)
+		})
+
 		viewPostsInChannelHTMLPartial(ctx, errs, channelViewModel, posts, viewSection)
 	})
 }
