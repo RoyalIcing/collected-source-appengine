@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,10 +16,12 @@ import (
 
 	"github.com/gorilla/mux"
 	"google.golang.org/appengine"
+	// graphql "github.com/graph-gophers/graphql-go"
 )
 
 // AddPostsRoutes adds routes for working with channels and posts
 func AddPostsRoutes(r *mux.Router) {
+	// TODO: move to separate routesChannel.go
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}").Methods("GET").
 		HandlerFunc(getChannelInfoHandle)
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}").Methods("PUT").
@@ -26,6 +29,8 @@ func AddPostsRoutes(r *mux.Router) {
 
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
 		HandlerFunc(listPostsInChannelHandle)
+	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts.csv").Methods("GET").
+		HandlerFunc(listPostsCSVInChannelHandle)
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts/{postID}").Methods("GET").
 		HandlerFunc(getPostInChannelHandle)
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
@@ -82,13 +87,54 @@ func listPostsInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
+	postsConnection, err := channelsRepo.NewPostsConnection(PostsConnectionOptions{
+		channelSlug:    vars.channelSlug(),
+		includeReplies: true,
+		maxCount:       1000,
+	})
+	if err != nil {
+		writeErrorJSON(w, err)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/json")
+
+	posts, err := postsConnection.All()
 	if err != nil {
 		writeErrorJSON(w, err)
 		return
 	}
 
 	writeJSON(w, posts)
+}
+
+func listPostsCSVInChannelHandle(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+	vars := routeVarsFrom(r)
+
+	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
+	channelsRepo := NewChannelsRepo(ctx, orgRepo)
+
+	postsConnection, err := channelsRepo.NewPostsConnection(PostsConnectionOptions{
+		channelSlug:    vars.channelSlug(),
+		includeReplies: false,
+		maxCount:       1000,
+	})
+	if err != nil {
+		writeErrorJSON(w, err)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/csv")
+
+	csvWriter := csv.NewWriter(w)
+	err = postsConnection.WriteToCSV(csvWriter)
+	if err != nil {
+		writeErrorJSON(w, err)
+		return
+	}
+
+	csvWriter.Flush()
 }
 
 func getPostInChannelHandle(w http.ResponseWriter, r *http.Request) {

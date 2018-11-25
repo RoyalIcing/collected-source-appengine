@@ -77,6 +77,26 @@ type Commands {
 }
 `
 
+const awsSchemaString = `
+type AWSService {
+	s3: AWSS3Service
+}
+
+type AWSS3Service {
+	object(bucket: String!, key: String!): AWSS3Object
+}
+
+type AWSS3Object {
+	body: AWSS3ObjectBody
+}
+
+type AWSS3ObjectBody {
+	contentLength: Int
+	contentType: String
+	string: String
+}
+`
+
 const schemaString = (`
 schema {
 	query: Query
@@ -155,12 +175,13 @@ type Channel implements Node {
 
 	posts: PostsConnection
 }
-` + commandsSchemaString + `
+` + commandsSchemaString + awsSchemaString + `
 type Query {
 	hello: String!
 	channel(slug: String): Channel
 	#channel(): Channel
 	channels(): [Channel]
+	aws(region: String!): AWSService
 }
 
 type Mutation {
@@ -187,6 +208,7 @@ type Resolver interface {
 	Hello() string
 	Channel(ctx context.Context, args ChannelArgs) (*Channel, error)
 	Channels(ctx context.Context /*, args ChannelsArgs*/) (*[]*Channel, error)
+	AWS(ctx context.Context, args struct{ Region string }) (*schemaAWSService, error)
 }
 
 // MakeSchema creates a GraphQL schema
@@ -225,4 +247,9 @@ func (r DataStoreResolver) Channels(ctx context.Context /*, args ChannelsArgs*/)
 func (r DataStoreResolver) Commands(ctx context.Context) (*Commands, error) {
 	commands := Commands{}
 	return &commands, nil
+}
+
+// AWS service resolved
+func (r DataStoreResolver) AWS(ctx context.Context, args struct{ Region string }) (*schemaAWSService, error) {
+	return newSchemaAWSService(ctx, args)
 }

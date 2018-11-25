@@ -31,7 +31,7 @@ func (channel *Channel) Slug() *string {
 }
 
 // Posts resolved
-func (channel *Channel) Posts(ctx context.Context) (*PostsConnection, error) {
+func (channel *Channel) Posts(ctx context.Context) (*PostsConnection2, error) {
 	orgSlug := "RoyalIcing"
 
 	orgRepo := NewOrgRepo(ctx, orgSlug)
@@ -49,7 +49,7 @@ func (channel *Channel) Posts(ctx context.Context) (*PostsConnection, error) {
 		postEdges = append(postEdges, postEdge)
 	}
 
-	c := NewPostsConnection(&postEdges)
+	c := NewPostsConnectionWithEdges(&postEdges)
 
 	return &c, nil
 }

@@ -10,6 +10,9 @@ deploy:
 	gcloud datastore indexes create index.yaml && \
 	gcloud app deploy app.prod.yaml --project "${PROJECT}"
 
+deploy2:
+	python2 /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/platform/google_appengine/goapp deploy -application "${PROJECT}" app.prod.yaml
+
 test_integration:
 	cd tests-integration && \
 	yarn test

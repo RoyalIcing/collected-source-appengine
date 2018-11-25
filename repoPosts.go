@@ -256,6 +256,12 @@ func (repo ChannelsRepo) GetPostWithIDInChannel(channelSlug string, postID strin
 	return &post, nil
 }
 
+// NewPostsConnection makes a new connection with the posts in a specific channel
+func (repo ChannelsRepo) NewPostsConnection(options PostsConnectionOptions) (*PostsConnection, error) {
+	connection := PostsConnection{repo: repo, options: options}
+	return &connection, nil
+}
+
 // ListPostsInChannel lists all post in a channel of a certain slug
 func (repo ChannelsRepo) ListPostsInChannel(channelSlug string) ([]Post, error) {
 	channelContentKey := repo.channelContentKeyFor(channelSlug)

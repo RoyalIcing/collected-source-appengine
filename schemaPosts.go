@@ -81,26 +81,26 @@ func (postEdge *PostEdge) Cursor() graphql.ID {
 	return graphql.ID(postEdge.cursor)
 }
 
-// PostsConnection is a connection to a collection of posts
-type PostsConnection struct {
+// PostsConnection2 is a connection to a collection of posts
+type PostsConnection2 struct {
 	edges *[]*PostEdge
 }
 
-// NewPostsConnection makes a post connection with the provided values
-func NewPostsConnection(edges *[]*PostEdge) PostsConnection {
-	postsConnection := PostsConnection{
+// NewPostsConnectionWithEdges makes a post connection with the provided values
+func NewPostsConnectionWithEdges(edges *[]*PostEdge) PostsConnection2 {
+	postsConnection := PostsConnection2{
 		edges: edges,
 	}
 	return postsConnection
 }
 
 // Edges resolved
-func (postsConnection PostsConnection) Edges() *[]*PostEdge {
+func (postsConnection PostsConnection2) Edges() *[]*PostEdge {
 	return postsConnection.edges
 }
 
 // TotalCount resolved
-func (postsConnection PostsConnection) TotalCount() *int32 {
+func (postsConnection PostsConnection2) TotalCount() *int32 {
 	if postsConnection.edges == nil {
 		return nil
 	}
