@@ -34,11 +34,13 @@ func AddHTMLPostsRoutes(r *mux.Router) {
 func viewChannelHeader(m ChannelViewModel, fontSize string, w *bufio.Writer) {
 	w.WriteString(fmt.Sprintf(`
 <header class="pt-4 pb-3 bg-indigo-darker">
-	<div class="max-w-md mx-auto flex row justify-between">
-		<h1 class="%s">
-			<a href="%s" class="text-white no-underline hover:underline">💬 %s</a>
-		</h1>
-		<input type="search" placeholder="Search %s" class="w-64 px-2 py-2 bg-indigo rounded">
+	<div class="max-w-md mx-auto">
+		<div class="mx-2 md:mx-0 flex flex-wrap flex-col sm:flex-row items-center sm:items-start sm:justify-between">
+			<h1 class="%s min-w-full sm:min-w-0 mb-2 sm:mb-0">
+				<a href="%s" class="text-white no-underline hover:underline">💬 %s</a>
+			</h1>
+			<input type="search" placeholder="Search %s" class="w-64 px-2 py-2 bg-indigo rounded">
+		</div>
 	</div>
 </header>
 `, fontSize, m.HTMLPostsURL(), m.ChannelSlug, m.ChannelSlug))
@@ -72,11 +74,11 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 					resolver := NewDataStoreResolver()
 					schema := MakeSchema(&resolver)
 					response := schema.Exec(ctx, post.Content.Source, "", map[string]interface{}{})
-					responseJSON, err := json.Marshal(response)
+					responseJSON, err := json.MarshalIndent(response, "", "  ")
 					if err != nil {
 						return htmlError(err)
 					} else {
-						return template.HTML(`<hr class="mt-4 mb-4 border-b border-green"><pre>` + html.EscapeString(string(responseJSON)) + `</pre>`)
+						return template.HTML(`<div class="p-2 border-t-2 border-purple bg-purple-lightest rounded-sm"><pre>` + html.EscapeString(string(responseJSON)) + `</pre></div>`)
 					}
 				} else {
 					command, err := ParseCommandInput(post.Content.Source)
@@ -85,7 +87,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 						if err != nil {
 							return htmlError(err)
 						} else {
-							return template.HTML(`<hr class="mt-4 mb-4 border-b border-green">` + SafeHTMLForCommandResult(result))
+							return template.HTML(`<div class="p-2 border-t-2 border-green bg-green-lightest rounded-sm">` + SafeHTMLForCommandResult(result) + `</div>`)
 						}
 					} else {
 						return htmlError(err)
@@ -131,7 +133,9 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{end}}
 
 {{define "commandResult"}}
+<div class="my-6">
 {{displayCommandResult .}}
+</div>
 {{end}}
 
 {{define "postActions"}}
@@ -139,9 +143,9 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 	<form data-target="posts.createReplyForm" method="post" action="{{childPostsURL .Key.Encode}}" class="my-4"></form>
 	<div class="flex row justify-between">
 		<div></div>
-		<div class="flex row bg-grey-light border border-grey-light rounded">
+		<div class="flex row bg-grey-lightest border border-grey-lightest rounded">
 			<button data-action="posts#beginReply" class="px-2 py-1 text-grey-darkest"> ↩︎</button>
-			<button data-action="posts#addToFaves" class="px-2 py-1 text-grey-darkest border-l border-grey-light"> ☆</button>
+			<button data-action="posts#addToFaves" class="px-2 py-1 text-grey-darkest border-l border-grey-lighter"> ☆</button>
 		</div>
 	</div>
 </div>
@@ -156,7 +160,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{end}}
 
 {{define "postInList"}}
-<div class="p-4 pb-6 bg-white border-b border-grey-dark shadow-md" data-target="posts.post">
+<div class="p-4 pb-6 bg-white border-t-2 border-blue-light rounded-sm shadow" data-target="posts.post">
 {{template "topBar" .}}
 {{template "content" .}}
 {{template "postActions" .}}
@@ -171,7 +175,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 {{end}}
 
 {{define "postIndividual"}}
-<div class="p-4 pb-6 bg-white border-b border-blue-light" data-target="posts.post">
+<div class="p-4 pb-6 bg-white border-t-4 border-blue-light rounded-sm" data-target="posts.post">
 {{template "topBarLarge" .}}
 {{template "contentLarge" .}}
 
@@ -214,10 +218,10 @@ func viewCreatePostFormInChannelHTMLHandle(channelViewModel ChannelViewModel, w 
 <form data-target="posts.createForm" method="post" action="` + channelViewModel.HTMLPostsURL() + `" class="my-4">
 <textarea data-target="posts.mainTextarea" data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
 <div class="flex flex-row-reverse">
-<button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darker border border-blue-darker">Post</button>
-<button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark hidden">Run</button>
-<button type="submit" name="action" value="beginDraft" data-target="posts.beginDraftButton" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-dark hidden">Begin Draft</button>
-<button type="submit" name="action" value="runGraphQLQuery" data-target="posts.runGraphQLQueryButton" class="mt-2 px-4 py-2 font-bold text-white bg-pink-dark border border-pink-dark hidden">Run GraphQL Query</button>
+<button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-indigo-darker border border-indigo-darker rounded shadow">Post</button>
+<button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark rounded shadow hidden">Run</button>
+<button type="submit" name="action" value="beginDraft" data-target="posts.beginDraftButton" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-dark rounded shadow hidden">Begin Draft</button>
+<button type="submit" name="action" value="runGraphQLQuery" data-target="posts.runGraphQLQueryButton" class="mt-2 px-4 py-2 font-bold text-white bg-pink-dark border border-pink-dark rounded shadow hidden">Run GraphQL Query</button>
 </div>
 </form>
 `)
@@ -248,13 +252,13 @@ func viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel ChannelVie
 	w.WriteString(`
 <div data-controller="developer">
 <details class="mb-4 bg-indigo-darker">
-	<summary class="max-w-md mx-auto p-1 italic cursor-pointer text-right text-sm text-indigo-lighter bg-indigo-darker select-none">Developer</summary>
-	<div class="max-h-screen overflow-auto bg-yellow-lightest">
-		<div class="flex row">
-			<pre class="w-1/2 p-2 bg-indigo-lightest text-indigo-darkest"><code data-target="developer.queryCode">` + query + `</code></pre>
-			<div class="w-1/2">
-				<button data-action="developer#runQuery" class="mb-2 px-4 py-2 font-bold text-white bg-green-darker border border-green-darker">Query</button>
-				<pre class="p-2 text-green-darkest"><code data-target="developer.result"></code></pre>
+	<summary class="max-w-md mx-auto p-1 italic cursor-pointer text-center sm:text-right text-sm text-indigo-lighter bg-indigo-darker select-none">Developer</summary>
+	<div class="sm:max-h-screen overflow-auto bg-yellow-lightest">
+		<div class="flex flex-col sm:flex-row">
+			<pre class="sm:w-1/2 p-2 bg-indigo-lightest text-indigo-darkest"><code data-target="developer.queryCode">` + query + `</code></pre>
+			<div class="sm:w-1/2">
+				<button data-action="developer#runQuery" class="w-full mb-1 px-4 py-2 whitespace-pre-wrap break-words font-bold text-white bg-green-darker border border-green-darker">►</button>
+				<pre class="p-2 whitespace-pre-wrap break-words text-green-darkest"><code data-target="developer.result"></code></pre>
 			</div>
 		</div>
 	</div>
@@ -275,8 +279,15 @@ func viewPostsInChannelHTMLPartial(ctx context.Context, errs []error, channelVie
 		}
 
 		sw.WriteString(`<div data-controller="posts">`)
+
+		sw.WriteString(`<div class="mx-2 md:mx-0">`)
 		viewCreatePostFormInChannelHTMLHandle(channelViewModel, sw)
+		sw.WriteString(`</div>`)
+
+		sw.WriteString(`<div class="mb-6">`)
 		viewPostsInChannelHTMLHandle(ctx, posts, channelViewModel, sw)
+		sw.WriteString(`</div>`)
+
 		sw.WriteString(`</div>`)
 	})
 }
@@ -330,9 +341,12 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 
 		viewSection(false, func(sw *bufio.Writer) {
 			sw.WriteString(`<div data-controller="posts">`)
-			viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
 
-			sw.WriteString(`<div class="hidden">`)
+			sw.WriteString(`<div class="mt-4">`)
+			viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
+			sw.WriteString(`</div>`)
+
+			sw.WriteString(`<div hidden class="hidden">`)
 			viewCreatePostFormInChannelHTMLHandle(channelViewModel, sw)
 			sw.WriteString(`</div>`)
 

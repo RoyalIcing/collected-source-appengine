@@ -142,7 +142,7 @@ type OrgViewModel struct {
 func (m OrgViewModel) viewNav(w *bufio.Writer) {
 	t := template.Must(template.New("nav").Parse(`
 <nav class="text-white bg-black">
-<div class="max-w-md mx-auto flex flex-row leading-normal">
+<div class="max-w-md mx-auto flex flex-col sm:flex-row items-center sm:items-start leading-normal">
 <strong class="py-1">{{.OrgSlug}}</strong>
 </div>
 </nav>
