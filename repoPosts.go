@@ -51,9 +51,9 @@ type Post struct {
 	ParentPostKey *datastore.Key `json:"parentPostID"`
 	//AuthorID string            `json:"authorID"`
 	Content           MarkdownDocument `json:"content"`
-	ContentStorageKey string
-	Replies           *[]Post `datastore:"-" json:"replies"`
-	CommandType       string  `json:"commandType"`
+	ContentStorageKey string           `json:"-"`
+	Replies           *[]Post          `datastore:"-" json:"replies,omitempty"`
+	CommandType       string           `json:"commandType"`
 }
 
 // ChannelsRepo lets you query the channels repository
