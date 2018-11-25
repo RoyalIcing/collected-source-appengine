@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	// "golang.org/x/net/html"
+	"golang.org/x/net/html"
 	"html/template"
 
 	"github.com/gorilla/mux"
@@ -176,17 +176,30 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 			return t.Format(time.RFC822)
 		},
 		"displayCommandResult": func(post Post) template.HTML {
-			if post.CommandType != "" {
-				command, err := ParseCommandInput(post.Content.Source)
-				if err == nil {
-					result, err := command.Run(ctx)
+			commandType := post.CommandType
+			if commandType != "" {
+				if commandType == "v0-runGraphQLQuery" {
+					resolver := NewDataStoreResolver()
+					schema := MakeSchema(&resolver)
+					response := schema.Exec(ctx, post.Content.Source, "", map[string]interface{}{})
+					responseJSON, err := json.Marshal(response)
 					if err != nil {
 						return htmlError(err)
 					} else {
-						return template.HTML(`<hr class="mt-4 mb-4 border-b border-green">` + SafeHTMLForCommandResult(result))
+						return template.HTML(`<hr class="mt-4 mb-4 border-b border-green"><pre>` + html.EscapeString(string(responseJSON)) + `</pre>`)
 					}
 				} else {
-					return htmlError(err)
+					command, err := ParseCommandInput(post.Content.Source)
+					if err == nil {
+						result, err := command.Run(ctx)
+						if err != nil {
+							return htmlError(err)
+						} else {
+							return template.HTML(`<hr class="mt-4 mb-4 border-b border-green">` + SafeHTMLForCommandResult(result))
+						}
+					} else {
+						return htmlError(err)
+					}
 				}
 			}
 			return ""
@@ -309,11 +322,12 @@ func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelVi
 func viewCreatePostFormInChannelHTMLHandle(channelViewModel ChannelViewModel, w *bufio.Writer) {
 	w.WriteString(`
 <form data-target="posts.createForm" method="post" action="` + channelViewModel.HTMLPostsURL() + `" class="my-4">
-<textarea data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
+<textarea data-target="posts.mainTextarea" data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
 <div class="flex flex-row-reverse">
 <button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-blue-darker border border-blue-darker">Post</button>
 <button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark hidden">Run</button>
 <button type="submit" name="action" value="beginDraft" data-target="posts.beginDraftButton" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-dark hidden">Begin Draft</button>
+<button type="submit" name="action" value="runGraphQLQuery" data-target="posts.runGraphQLQueryButton" class="mt-2 px-4 py-2 font-bold text-white bg-pink-dark border border-pink-dark hidden">Run GraphQL Query</button>
 </div>
 </form>
 `)
@@ -449,6 +463,8 @@ func createPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	commandType := ""
 	if action == "runCommand" {
 		commandType = "v0"
+	} else if action == "runGraphQLQuery" {
+		commandType = "v0-runGraphQLQuery"
 	}
 
 	input := CreatePostInput{

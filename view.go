@@ -43,13 +43,16 @@ app.register('posts', class extends Stimulus.Controller {
 	markdownInputChanged({ target: { value } }) {
 		const isCommand = value[0] === '/';
 		const isMarkdownHeading = value[0] === '#' && value[1] === ' ';
-		this.changeSubmitMode(isCommand ? 'run' : isMarkdownHeading ? 'draft' : 'submit');
+		const isGraphQLQuery = /^query\s+.*{/.test(value);
+		this.changeSubmitMode(isCommand ? 'run' : isMarkdownHeading ? 'draft' : isGraphQLQuery ? 'graphQLQuery' : 'submit');
 	}
 
 	changeSubmitMode(mode) {
 		this.targets.find('submitPostButton').classList.toggle('hidden', mode !== 'submit');
 		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
 		this.targets.find('beginDraftButton').classList.toggle('hidden', mode !== 'draft');
+		this.targets.find('runGraphQLQueryButton').classList.toggle('hidden', mode !== 'graphQLQuery');
+		this.targets.find('mainTextarea').classList.toggle('font-mono', mode === 'run' || mode === 'graphQLQuery');
 	}
 });
 {{end}}
