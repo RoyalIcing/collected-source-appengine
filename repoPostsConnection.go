@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"errors"
-	"log"
 
 	"google.golang.org/appengine/datastore"
 )
@@ -52,7 +51,6 @@ func (c *PostsConnection) enumerate(usePost func(post Post)) error {
 		if includeReplies {
 			if currentPost.ParentPostKey != nil {
 				replies[currentPost.ParentPostKey.Encode()] = append(replies[currentPost.ParentPostKey.Encode()], currentPost)
-				log.Printf("added reply for %v now %v\n", currentPost.ParentPostKey, replies)
 			} else {
 				posts = append(posts, currentPost)
 			}
@@ -70,7 +68,6 @@ func (c *PostsConnection) enumerate(usePost func(post Post)) error {
 		for i, j := 0, len(postReplies)-1; i < j; i, j = i+1, j-1 {
 			postReplies[i], postReplies[j] = postReplies[j], postReplies[i]
 		}
-		log.Printf("replies for %v are %v\n", post.Key, postReplies)
 		post.Replies = &postReplies
 
 		usePost(post)
@@ -91,7 +88,6 @@ func (c *PostsConnection) All() ([]Post, error) {
 // WriteToCSV writes all the posts as CSV records
 func (c *PostsConnection) WriteToCSV(w *csv.Writer) error {
 	w.Write([]string{"id", "createdAt", "parentPostID", "commandType", "content"})
-	log.Println("wrote csv header")
 
 	return c.enumerate(func(post Post) {
 		parentPostID := ""
@@ -99,6 +95,5 @@ func (c *PostsConnection) WriteToCSV(w *csv.Writer) error {
 			parentPostID = post.ParentPostKey.Encode()
 		}
 		w.Write([]string{post.Key.Encode(), post.CreatedAt.String(), parentPostID, post.CommandType, post.Content.Source})
-		log.Println("wrote csv row")
 	})
 }

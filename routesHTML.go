@@ -139,11 +139,23 @@ type OrgViewModel struct {
 	OrgSlug string
 }
 
+// HTMLURL builds a URL to a org’s home page
+func (m OrgViewModel) HTMLURL() string {
+	return fmt.Sprintf("/org:%s", m.OrgSlug)
+}
+
+// HTMLChannelsURL builds a URL to a org’s channels
+func (m OrgViewModel) HTMLChannelsURL() string {
+	return fmt.Sprintf("/org:%s/channels", m.OrgSlug)
+}
+
 func (m OrgViewModel) viewNav(w *bufio.Writer) {
 	t := template.Must(template.New("nav").Parse(`
 <nav class="text-white bg-black">
 <div class="max-w-md mx-auto flex flex-col sm:flex-row items-center sm:items-start leading-normal">
-<strong class="py-1">{{.OrgSlug}}</strong>
+<strong class="py-1">
+	<a href="{{.HTMLURL}}" class="no-underline hover:underline text-white">{{.OrgSlug}}</a>
+</strong>
 </div>
 </nav>
 `))

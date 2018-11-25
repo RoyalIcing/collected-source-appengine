@@ -274,18 +274,17 @@ func viewPostsInChannelHTMLPartial(ctx context.Context, errs []error, channelVie
 
 func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
-	vars := routeVarsFrom(r)
+	channelViewModel := routeVarsFrom(r).ToChannelViewModel()
 
-	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
+	orgRepo := NewOrgRepo(ctx, channelViewModel.Org.OrgSlug)
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	posts, err := channelsRepo.ListPostsInChannel(vars.channelSlug())
+	posts, err := channelsRepo.ListPostsInChannel(channelViewModel.ChannelSlug)
 	if err != nil {
 		io.WriteString(w, "Error loading posts: "+err.Error())
 		return
 	}
 
-	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
 		viewSection(true, func(sw *bufio.Writer) {
 			viewDeveloperSectionForPostsInChannelHTMLHandle(channelViewModel, sw)

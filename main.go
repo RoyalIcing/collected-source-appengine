@@ -87,6 +87,7 @@ func main() {
 	AddFigmaRoutes(r)
 
 	AddHTMLDashboardRoutes(r)
+	AddHTMLOrgsRoutes(r)
 	AddHTMLPostsRoutes(r)
 
 	AddOrgsRoutes(r)

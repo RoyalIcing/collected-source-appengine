@@ -15,7 +15,6 @@ Content-Type: application/json
 
 ###
 PUT {{host}}/1/org:RoyalIcing/channel:design
-Content-Type: application/json
 
 ###
 GET {{host}}/1/org:RoyalIcing/channel:design

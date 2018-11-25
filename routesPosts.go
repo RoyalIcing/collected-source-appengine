@@ -77,15 +77,11 @@ func listPostsInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	postsConnection, err := channelsRepo.NewPostsConnection(PostsConnectionOptions{
+	postsConnection := channelsRepo.NewPostsConnection(PostsConnectionOptions{
 		channelSlug:    vars.channelSlug(),
 		includeReplies: true,
 		maxCount:       1000,
 	})
-	if err != nil {
-		writeErrorJSON(w, err)
-		return
-	}
 
 	w.Header().Add("Content-Type", "text/json")
 
@@ -105,20 +101,16 @@ func listPostsCSVInChannelHandle(w http.ResponseWriter, r *http.Request) {
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
 	channelsRepo := NewChannelsRepo(ctx, orgRepo)
 
-	postsConnection, err := channelsRepo.NewPostsConnection(PostsConnectionOptions{
+	postsConnection := channelsRepo.NewPostsConnection(PostsConnectionOptions{
 		channelSlug:    vars.channelSlug(),
 		includeReplies: false,
 		maxCount:       1000,
 	})
-	if err != nil {
-		writeErrorJSON(w, err)
-		return
-	}
 
 	w.Header().Add("Content-Type", "text/csv")
 
 	csvWriter := csv.NewWriter(w)
-	err = postsConnection.WriteToCSV(csvWriter)
+	err := postsConnection.WriteToCSV(csvWriter)
 	if err != nil {
 		writeErrorJSON(w, err)
 		return

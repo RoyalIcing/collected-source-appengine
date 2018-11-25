@@ -11,12 +11,16 @@ import (
 	// "google.golang.org/appengine/log"
 )
 
+const (
+	orgType = "Org"
+)
+
 // Org represents a group of people working together
 type Org struct {
 	Slug string `json:"slug"`
 }
 
-// OrgRepo lets you query the channels repository
+// OrgRepo lets you query a particular org
 type OrgRepo struct {
 	ctx     context.Context
 	orgKey  *datastore.Key
@@ -25,7 +29,7 @@ type OrgRepo struct {
 
 // NewOrgRepo makes a new org repository with the given org slug
 func NewOrgRepo(ctx context.Context, orgSlug string) OrgRepo {
-	orgKey := datastore.NewKey(ctx, "Org", orgSlug, 0, nil)
+	orgKey := datastore.NewKey(ctx, orgType, orgSlug, 0, nil)
 	return OrgRepo{
 		ctx:     ctx,
 		orgKey:  orgKey,
