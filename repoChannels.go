@@ -98,23 +98,28 @@ func (repo ChannelsRepo) GetChannelInfo(slug string) (*ChannelContent, error) {
 	return &channelContent, err
 }
 
+// OrgChannelsConnectionOptions offers parameters when retrieving channels from an org
 type OrgChannelsConnectionOptions struct {
 	maxCount int
 }
 
+// OrgChannelsConnection allow retrieving channels from an org
 type OrgChannelsConnection struct {
-	repo    OrgRepo
+	ctx     context.Context
+	orgKey  *datastore.Key
 	options OrgChannelsConnectionOptions
 }
 
+// NewChannelsConnection allows enumerating through the channels of an org
 func (repo ChannelsRepo) NewChannelsConnection(options OrgChannelsConnectionOptions) *OrgChannelsConnection {
-	c := OrgChannelsConnection{repo: repo.orgRepo, options: options}
+	c := OrgChannelsConnection{ctx: repo.ctx, orgKey: repo.orgRepo.RootKey(), options: options}
 	return &c
 }
 
+// Enumerate loops through each channel
 func (c *OrgChannelsConnection) Enumerate(useChannel func(channel ChannelContent)) error {
-	ctx := c.repo.ctx
-	orgKey := c.repo.RootKey()
+	ctx := c.ctx
+	orgKey := c.orgKey
 	limit := c.options.maxCount
 
 	q := datastore.NewQuery(channelContentType).Ancestor(orgKey).Limit(limit)

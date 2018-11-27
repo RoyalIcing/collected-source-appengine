@@ -38,9 +38,9 @@ func (v *Viewer) ReadAlert() *string {
 	v.sess.SetAttr("alert", nil)
 	if ok {
 		return &errorMessage
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 // GetGitHubClient returns the github.Client for the signed in user, if there is one
