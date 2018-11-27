@@ -11,3 +11,8 @@ indexes:
   properties:
   - name: "CreatedAt"
     direction: desc
+- kind: "ChannelContent"
+  ancestor: yes
+  properties:
+  - name: "CreatedAt"
+    direction: desc
