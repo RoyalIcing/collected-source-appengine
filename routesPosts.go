@@ -25,17 +25,6 @@ func AddPostsRoutes(r *mux.Router) {
 		HandlerFunc(getPostInChannelHandle)
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
 		HandlerFunc(createPostInChannelHandle)
-
-	dynamicElementsEnabled := map[string]bool{"posts": true, "developer": true}
-
-	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
-		HandlerFunc(WithHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{dynamicElementsEnabled: dynamicElementsEnabled}))
-	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}").Methods("GET").
-		HandlerFunc(WithHTMLTemplate(showPostInChannelHTMLHandle, htmlHandlerOptions{dynamicElementsEnabled: dynamicElementsEnabled}))
-	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
-		HandlerFunc(WithHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true, dynamicElementsEnabled: dynamicElementsEnabled}))
-	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}/posts").Methods("POST").
-		HandlerFunc(WithHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true, dynamicElementsEnabled: dynamicElementsEnabled}))
 }
 
 func getChannelInfoHandle(w http.ResponseWriter, r *http.Request) {
