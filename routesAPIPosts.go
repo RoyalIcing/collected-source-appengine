@@ -9,8 +9,8 @@ import (
 	"google.golang.org/appengine"
 )
 
-// AddPostsRoutes adds routes for working with channels and posts
-func AddPostsRoutes(r *mux.Router) {
+// AddAPIPostsRoutes adds routes for working with channels and posts with JSON/CSV
+func AddAPIPostsRoutes(r *mux.Router) {
 	// TODO: move to separate routesChannel.go
 	r.Path("/1/org:{orgSlug}/channel:{channelSlug}").Methods("GET").
 		HandlerFunc(getChannelInfoHandle)

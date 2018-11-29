@@ -90,8 +90,10 @@ func main() {
 	AddHTMLOrgsRoutes(r)
 	AddHTMLPostsRoutes(r)
 
+	AddFeedPostsRoutes(r)
+
 	AddOrgsRoutes(r)
-	AddPostsRoutes(r)
+	AddAPIPostsRoutes(r)
 
 	http.HandleFunc("/auth/status", AuthStatusHandle)
 

@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/csv"
 	"errors"
+	"time"
 
 	"google.golang.org/appengine/datastore"
+
+	"github.com/gorilla/feeds"
 )
 
 type PostsConnectionOptions struct {
@@ -96,4 +99,37 @@ func (c *PostsConnection) WriteToCSV(w *csv.Writer) error {
 		}
 		w.Write([]string{post.Key.Encode(), post.CreatedAt.String(), parentPostID, post.CommandType, post.Content.Source})
 	})
+}
+
+// MakeFeed generates a gorilla feed.Feed
+func (c *PostsConnection) MakeFeed(urlMaker FeedURLMaker) (*feeds.Feed, error) {
+	now := time.Now()
+	feed := &feeds.Feed{
+		Title:       "posts",
+		Link:        &feeds.Link{Href: urlMaker.url()},
+		Description: "",
+		// Author:      &feeds.Author{Name: "Jason Moiron", Email: "jmoiron@jmoiron.net"},
+		Created: now,
+	}
+
+	var feedItems []*feeds.Item
+	err := c.enumerate(func(post Post) {
+		postID := post.Key.Encode()
+		feedItem := &feeds.Item{
+			Title: "Post",
+			Link:  &feeds.Link{Href: urlMaker.itemURL(postID)},
+			// Author:  &feeds.Author{Name: "Jason Moiron", Email: "jmoiron@jmoiron.net"},
+			Id:      postID,
+			Content: post.Content.Source,
+			Created: post.CreatedAt,
+		}
+		feedItems = append(feedItems, feedItem)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	feed.Items = feedItems
+	return feed, nil
 }

@@ -24,7 +24,7 @@ func GetSessionManager(ctx context.Context) session.Manager {
 		AsyncDatastoreSave: false,
 	}), &session.CookieMngrOptions{
 		CookieMaxAge: sessionDuration,
-		AllowHTTP:    appengine.IsDevAppServer(),
+		AllowHTTP:    IsDev(),
 	})
 }
 
