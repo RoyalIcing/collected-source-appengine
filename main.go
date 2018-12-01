@@ -92,7 +92,7 @@ func main() {
 
 	AddFeedPostsRoutes(r)
 
-	AddOrgsRoutes(r)
+	AddAPIOrgsRoutes(r)
 	AddAPIPostsRoutes(r)
 
 	http.HandleFunc("/auth/status", AuthStatusHandle)

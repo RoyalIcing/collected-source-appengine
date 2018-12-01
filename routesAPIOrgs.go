@@ -7,8 +7,8 @@ import (
 	"google.golang.org/appengine"
 )
 
-// AddOrgsRoutes add routes for orgs
-func AddOrgsRoutes(r *mux.Router) {
+// AddAPIOrgsRoutes add routes for orgs
+func AddAPIOrgsRoutes(r *mux.Router) {
 	r.Path("/1/org:{orgName}").Methods("PUT").
 		HandlerFunc(createOrgHandle)
 }
