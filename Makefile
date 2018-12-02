@@ -6,3 +6,6 @@ build_frontend:
 
 dev:
 	cd main && make dev
+
+deploy:
+	cd main && make deploy

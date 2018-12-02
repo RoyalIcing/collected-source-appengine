@@ -66,6 +66,10 @@ func parseCommand(commands []string, params string) (Command, error) {
 		return ParseAWSCommand(commands[1:], params)
 	}
 
+	if commands[0] == "graphql" {
+		return ParseGraphQLCommand(commands[1:], params)
+	}
+
 	if commands[0] == "graphiql" {
 		return ParseGraphiqlCommand(commands[1:], params)
 	}
