@@ -1,5 +1,3 @@
-import './main.pcss'
-
 import React from 'react';
 import ReactDOM from 'react-dom';
 import GraphiQL from 'graphiql';

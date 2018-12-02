@@ -235,7 +235,7 @@ func viewCreatePostFormInChannelHTMLHandle(channelViewModel ChannelViewModel, w 
 	name="markdownSource"
 	rows="4"
 	placeholder="Write…"
-	class="block w-full p-2 bg-white border border-grey rounded-sm shadow focus:h-64 focus:shadow-lg"
+	class="block w-full p-2 bg-white border border-grey rounded-sm shadow focus:h-64 focus:shadow-lg transition-all-1s"
 ></textarea>
 <div class="flex flex-row-reverse">
 <button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-indigo-darker border border-indigo-darker rounded shadow">Post</button>
