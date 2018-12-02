@@ -10,12 +10,12 @@ import (
 
 const (
 	assetsHeadHTML = `
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/public/frontend.f1f5f80a.css">
 <script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
 <link href="//cdn.jsdelivr.net/npm/graphiql@0.11.11/graphiql.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.23.0/theme/solarized.css" />
 `
-	assetsBeforeBodyCloseHTML = `<script src="/public/frontend.fe3cdceb.js"></script>`
+	assetsBeforeBodyCloseHTML = `<script src="/public/frontend.61c92cb7.js"></script>`
 )
 
 func viewErrorMessage(errorMessage string, w *bufio.Writer) {

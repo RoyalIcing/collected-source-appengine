@@ -229,7 +229,14 @@ func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelVi
 func viewCreatePostFormInChannelHTMLHandle(channelViewModel ChannelViewModel, w *bufio.Writer) {
 	w.WriteString(`
 <form data-target="posts.createForm" method="post" action="` + channelViewModel.HTMLPostsURL() + `" class="my-4">
-<textarea data-target="posts.mainTextarea" data-action="input->posts#markdownInputChanged" name="markdownSource" rows="4" placeholder="Write…" class="block w-full p-2 bg-white border border-grey rounded shadow-inner"></textarea>
+<textarea
+	data-target="posts.mainTextarea"
+	data-action="input->posts#markdownInputChanged"
+	name="markdownSource"
+	rows="4"
+	placeholder="Write…"
+	class="block w-full p-2 bg-white border border-grey rounded-sm shadow focus:h-64 focus:shadow-lg"
+></textarea>
 <div class="flex flex-row-reverse">
 <button type="submit" name="action" value="submitPost" data-target="posts.submitPostButton" class="mt-2 px-4 py-2 font-bold text-white bg-indigo-darker border border-indigo-darker rounded shadow">Post</button>
 <button type="submit" name="action" value="runCommand" data-target="posts.runCommandButton" class="mt-2 px-4 py-2 font-bold text-green-dark bg-white border border-green-dark rounded shadow hidden">Run</button>
