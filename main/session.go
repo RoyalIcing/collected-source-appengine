@@ -51,3 +51,26 @@ func (v *Viewer) GetGitHubClient() *github.Client {
 
 	return GetGitHubClientFromSession(v.ctx, v.sess)
 }
+
+type ViewerCommandParamVariables struct {
+	viewer *Viewer
+}
+
+func (vars *ViewerCommandParamVariables) GitHubOAuthToken() string {
+	v := vars.viewer
+	if v.sess == nil {
+		return ""
+	}
+
+	token := GetGitHubTokenFromSession(v.ctx, v.sess)
+	if token == nil {
+		return ""
+	}
+
+	return token.AccessToken
+}
+
+func (v *Viewer) GetCommandParamVariables() *ViewerCommandParamVariables {
+	vars := ViewerCommandParamVariables{v}
+	return &vars
+}

@@ -2,16 +2,19 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"golang.org/x/net/html"
 	"html/template"
+	textTemplate "text/template"
 
 	"github.com/gorilla/mux"
 	"google.golang.org/appengine"
@@ -24,7 +27,7 @@ func AddHTMLPostsRoutes(r *mux.Router) {
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("GET").
 		HandlerFunc(WithHTMLTemplate(listPostsInChannelHTMLHandle, htmlHandlerOptions{dynamicElementsEnabled: dynamicElementsEnabled}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}").Methods("GET").
-		HandlerFunc(WithHTMLTemplate(showPostInChannelHTMLHandle, htmlHandlerOptions{dynamicElementsEnabled: dynamicElementsEnabled}))
+		HandlerFunc(WithHTMLTemplate(WithViewerInSession(showPostInChannelHTMLHandle), htmlHandlerOptions{dynamicElementsEnabled: dynamicElementsEnabled}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts").Methods("POST").
 		HandlerFunc(WithHTMLTemplate(createPostInChannelHTMLHandle, htmlHandlerOptions{form: true, dynamicElementsEnabled: dynamicElementsEnabled}))
 	r.Path("/org:{orgSlug}/channel:{channelSlug}/posts/{postID}/posts").Methods("POST").
@@ -35,7 +38,27 @@ func htmlError(err error) template.HTML {
 	return template.HTML(`<p>` + template.HTMLEscapeString(err.Error()) + `</p>`)
 }
 
-func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Template {
+func makeViewPostTemplate(ctx context.Context, m ChannelViewModel, commandParamVars CommandParamVariables) *template.Template {
+	postsPreprocessCommandParams := func(params string) (string, error) {
+		t := textTemplate.New("commandParams")
+		t, err := t.Parse(params)
+		if err != nil {
+			return "", err
+		}
+
+		log.Println("commandParamVars")
+		log.Println(commandParamVars.GitHubOAuthToken())
+
+		var buffer bytes.Buffer
+		err = t.Execute(&buffer, commandParamVars)
+		if err != nil {
+			return "", err
+		}
+
+		// gitHubClient := GetGitHubClientFromSession(ctx, sess)
+		return buffer.String(), nil
+	}
+
 	t := template.New("post").Funcs(template.FuncMap{
 		"postURL": func(postID string) string {
 			return m.HTMLPostURL(postID)
@@ -66,7 +89,7 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 						return template.HTML(`<div class="p-2 border-t-2 border-purple bg-purple-lightest rounded-sm"><pre>` + html.EscapeString(string(responseJSON)) + `</pre></div>`)
 					}
 				} else {
-					command, err := ParseCommandInput(post.Content.Source)
+					command, err := ParseCommandInput(post.Content.Source, postsPreprocessCommandParams)
 					if err == nil {
 						result, err := command.Run(ctx)
 						if err != nil {
@@ -186,13 +209,13 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel) *template.Tem
 	return t
 }
 
-func viewPostInChannelHTMLHandle(ctx context.Context, post Post, m ChannelViewModel, w *bufio.Writer) {
-	t := makeViewPostTemplate(ctx, m)
+func viewPostInChannelHTMLHandle(ctx context.Context, post Post, m ChannelViewModel, commandParamVars CommandParamVariables, w *bufio.Writer) {
+	t := makeViewPostTemplate(ctx, m, commandParamVars)
 	t.ExecuteTemplate(w, "postIndividual", post)
 }
 
 func viewPostsInChannelHTMLHandle(ctx context.Context, posts []Post, m ChannelViewModel, w *bufio.Writer) {
-	t := makeViewPostTemplate(ctx, m)
+	t := makeViewPostTemplate(ctx, m, nil)
 	for _, post := range posts {
 		t.ExecuteTemplate(w, "postInList", post)
 	}
@@ -300,8 +323,7 @@ func listPostsInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
+func showPostInChannelHTMLHandle(ctx context.Context, viewer *Viewer, w http.ResponseWriter, r *http.Request) {
 	vars := routeVarsFrom(r)
 
 	orgRepo := NewOrgRepo(ctx, vars.orgSlug())
@@ -314,6 +336,8 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	commandParamsVars := viewer.GetCommandParamVariables()
+
 	w.WriteHeader(200)
 
 	channelViewModel := vars.ToChannelViewModel()
@@ -322,7 +346,7 @@ func showPostInChannelHTMLHandle(w http.ResponseWriter, r *http.Request) {
 			sw.WriteString(`<div data-controller="posts">`)
 
 			sw.WriteString(`<div class="mt-4">`)
-			viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, sw)
+			viewPostInChannelHTMLHandle(ctx, *post, channelViewModel, commandParamsVars, sw)
 			sw.WriteString(`</div>`)
 
 			sw.WriteString(`<div hidden class="hidden">`)

@@ -11,8 +11,12 @@ type Command interface {
 	Run(ctx context.Context) (CommandResult, error)
 }
 
+type CommandParamVariables interface {
+	GitHubOAuthToken() string
+}
+
 // ParseCommandInput parses a /… command
-func ParseCommandInput(input string) (Command, error) {
+func ParseCommandInput(input string, preprocessParams func(string) (string, error)) (Command, error) {
 	input = strings.TrimLeft(input, "/")
 	request := strings.SplitN(input, "\n", 2)
 
@@ -23,6 +27,11 @@ func ParseCommandInput(input string) (Command, error) {
 	var params string
 	if len(request) >= 2 {
 		params = request[1]
+	}
+
+	params, err := preprocessParams(params)
+	if err != nil {
+		return nil, err
 	}
 
 	commands := parseSubcommands(request[0])

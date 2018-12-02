@@ -15,7 +15,7 @@ const (
 <link href="//cdn.jsdelivr.net/npm/graphiql@0.11.11/graphiql.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.23.0/theme/solarized.css" />
 `
-	assetsBeforeBodyCloseHTML = `<script src="/public/frontend.3864e107.js"></script>`
+	assetsBeforeBodyCloseHTML = `<script src="/public/frontend.fe3cdceb.js"></script>`
 )
 
 func viewErrorMessage(errorMessage string, w *bufio.Writer) {

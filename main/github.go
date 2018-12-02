@@ -104,14 +104,24 @@ func githubOAuthCallbackHandle(w http.ResponseWriter, r *http.Request) {
 	afterSignInHandle(w, r)
 }
 
-// GetGitHubClientFromSession returns a github.Client from a session
-func GetGitHubClientFromSession(ctx context.Context, sess session.Session) *github.Client {
+// GetGitHubTokenFromSession returns a oauth2.Token for GitHub from a session
+func GetGitHubTokenFromSession(ctx context.Context, sess session.Session) *oauth2.Token {
 	token, ok := sess.Attr(gitHubTokenKey).(oauth2.Token)
 	if !ok {
 		return nil
 	}
 
-	return github.NewClient(githubOauthCfg.Client(ctx, &token))
+	return &token
+}
+
+// GetGitHubClientFromSession returns a github.Client from a session
+func GetGitHubClientFromSession(ctx context.Context, sess session.Session) *github.Client {
+	token := GetGitHubTokenFromSession(ctx, sess)
+	if token == nil {
+		return nil
+	}
+
+	return github.NewClient(githubOauthCfg.Client(ctx, token))
 }
 
 // WithGitHubClient adds github.Client as extra arguments to a SessHandlerFunc

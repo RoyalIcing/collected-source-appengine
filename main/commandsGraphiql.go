@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	// htmlTemplate "html/template"
-	textTemplate "text/template"
+	"html/template"
 
 	"github.com/BurntSushi/toml"
 )
@@ -21,7 +20,8 @@ func ParseGraphiqlCommand(subcommands []string, params string) (Command, error) 
 
 // A GraphiqlMainCommand represents the `/graphiql` command
 type GraphiqlMainCommand struct {
-	EndpointURL string `toml:"endpoint"`
+	EndpointURL string            `toml:"endpoint"`
+	Headers     map[string]string `toml:"headers"`
 }
 
 // ParseGraphiqlMainCommand creates a new `/graphiql` command
@@ -38,8 +38,8 @@ func ParseGraphiqlMainCommand(params string) (*GraphiqlMainCommand, error) {
 
 // Run shows a Graphiql editor for the passed endpoint
 func (cmd *GraphiqlMainCommand) Run(ctx context.Context) (CommandResult, error) {
-	t := textTemplate.New("post")
-	t = textTemplate.Must(t.Parse(`
+	t := template.New("graphiql command")
+	t = template.Must(t.Parse(`
 {{define "result"}}
 <div id="collected-graphiql-command-result" style="height: 1000px;"></div>
 <script>
@@ -47,7 +47,8 @@ window.collectedTasks.push({
 	method: 'renderGraphiqlForURL',
 	params: {
 		domElement: document.getElementById('collected-graphiql-command-result'),
-		endpointURL: "{{ .EndpointURL }}"
+		endpointURL: "{{ .EndpointURL }}",
+		headers: {{ .Headers }}
 	}
 })
 </script>

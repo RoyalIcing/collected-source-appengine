@@ -2,11 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import GraphiQL from 'graphiql';
 
-function renderGraphiqlForURL({ endpointURL, domElement }) {
+function renderGraphiqlForURL({ domElement, endpointURL, headers }) {
   function fetcher(graphQLParams) {
     return fetch(endpointURL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
       body: JSON.stringify(graphQLParams),
     }).then(response => response.json());
   }
