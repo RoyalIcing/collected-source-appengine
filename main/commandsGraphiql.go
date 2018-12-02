@@ -59,5 +59,8 @@ window.collectedTasks.push({
 	t.ExecuteTemplate(&htmlBuffer, "result", cmd)
 	result := DangerousHTMLCommandResultFromSafe(htmlBuffer.String())
 
+	// result.wantsFullWidth = true
+	result.SetFullWidth(true)
+
 	return result, nil
 }

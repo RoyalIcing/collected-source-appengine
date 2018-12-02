@@ -92,10 +92,15 @@ func makeViewPostTemplate(ctx context.Context, m ChannelViewModel, commandParamV
 					command, err := ParseCommandInput(post.Content.Source, postsPreprocessCommandParams)
 					if err == nil {
 						result, err := command.Run(ctx)
+						wantsFullWidth := result.WantsFullWidth()
 						if err != nil {
 							return htmlError(err)
 						} else {
-							return template.HTML(`<div class="p-2 border-t-2 border-green bg-green-lightest rounded-sm">` + SafeHTMLForCommandResult(result) + `</div>`)
+							classes := ""
+							if !wantsFullWidth {
+								classes = "p-2 border-t-2 border-green bg-green-lightest rounded-sm"
+							}
+							return template.HTML(`<div class="` + classes + `">` + SafeHTMLForCommandResult(result) + `</div>`)
 						}
 					} else {
 						return htmlError(err)
@@ -342,7 +347,7 @@ func showPostInChannelHTMLHandle(ctx context.Context, viewer *Viewer, w http.Res
 
 	channelViewModel := vars.ToChannelViewModel()
 	channelViewModel.ViewPage(w, func(viewSection func(wide bool, viewInner func(sw *bufio.Writer))) {
-		viewSection(false, func(sw *bufio.Writer) {
+		viewSection(true, func(sw *bufio.Writer) {
 			sw.WriteString(`<div data-controller="posts">`)
 
 			sw.WriteString(`<div class="mt-4">`)
