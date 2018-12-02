@@ -14,3 +14,6 @@
 *.env
 .envrc
 app.*.yaml
+.cache
+
+main/public

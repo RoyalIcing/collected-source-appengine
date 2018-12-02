@@ -32,12 +32,12 @@ type HTMLCommandResult struct {
 
 // HTMLCommandResultFromUnsafe makes a result fronm unsafe HTML
 func HTMLCommandResultFromUnsafe(unsafeHTML string) HTMLCommandResult {
-	return HTMLCommandResult{unsafeHTML, false}
+	return HTMLCommandResult{unsafeHTML: unsafeHTML, isActuallySafe: false}
 }
 
 // DangerousHTMLCommandResultFromSafe makes a result fronm safe HTML
 func DangerousHTMLCommandResultFromSafe(safeHTML string) HTMLCommandResult {
-	return HTMLCommandResult{safeHTML, true}
+	return HTMLCommandResult{unsafeHTML: safeHTML, isActuallySafe: true}
 }
 
 // UnsafeHTML returns the underlying html.Node

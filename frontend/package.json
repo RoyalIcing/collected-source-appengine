@@ -1,0 +1,19 @@
+{
+  "name": "collected-frontend",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "parcel build index.html"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.10.3"
+  },
+  "dependencies": {
+    "graphiql": "^0.12.0",
+    "graphql": "^14.0.2",
+    "react": "^16.6.3",
+    "react-dom": "^16.6.3"
+  }
+}

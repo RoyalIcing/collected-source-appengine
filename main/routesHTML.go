@@ -8,6 +8,16 @@ import (
 	"net/http"
 )
 
+const (
+	assetsHeadHTML = `
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
+<script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
+<link href="//cdn.jsdelivr.net/npm/graphiql@0.11.11/graphiql.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.23.0/theme/solarized.css" />
+`
+	assetsBeforeBodyCloseHTML = `<script src="/public/frontend.3864e107.js"></script>`
+)
+
 func viewErrorMessage(errorMessage string, w *bufio.Writer) {
 	w.WriteString(`<p class="py-1 px-2 bg-white text-red">` + errorMessage + "</p>")
 }
@@ -103,8 +113,11 @@ func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
-<script defer src="https://unpkg.com/stimulus@1.0.1/dist/stimulus.umd.js"></script>
+`)
+
+		io.WriteString(w, assetsHeadHTML)
+
+		io.WriteString(w, `
 <style>
 .grid-1\/3-2\/3 {
 	display: grid;
@@ -117,9 +130,17 @@ func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 	grid-row-gap: 0.25rem;
 }
 </style>
-</head>
-<body class="bg-grey-lightest">
 `)
+
+		io.WriteString(w, `
+<script>
+window.collectedTasks = [];
+</script>
+`)
+
+		io.WriteString(w, `</head>`)
+
+		io.WriteString(w, `<body class="bg-grey-lightest">`)
 
 		if formErr != nil {
 			w.WriteHeader(400)
@@ -130,6 +151,7 @@ func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 
 		writeDynamicElementsScript(w, options.dynamicElementsEnabled)
 
+		io.WriteString(w, assetsBeforeBodyCloseHTML)
 		io.WriteString(w, "</body></html>")
 	})
 }
