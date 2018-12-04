@@ -62,7 +62,12 @@ app.register('posts', class extends Stimulus.Controller {
 		this.targets.find('runCommandButton').classList.toggle('hidden', mode !== 'run');
 		this.targets.find('beginDraftButton').classList.toggle('hidden', mode !== 'draft');
 		this.targets.find('runGraphQLQueryButton').classList.toggle('hidden', mode !== 'graphQLQuery');
-		this.targets.find('mainTextarea').classList.toggle('font-mono', mode === 'run' || mode === 'graphQLQuery');
+
+		const mainTextareaEl = this.targets.find('mainTextarea');
+		mainTextareaEl.classList.toggle('font-mono', mode === 'run' || mode === 'graphQLQuery');
+		mainTextareaEl.classList.toggle('focus:h-screen', mode === 'draft');
+		mainTextareaEl.classList.toggle('text-lg', mode === 'draft');
+		mainTextareaEl.classList.toggle('border-purple', mode === 'draft');
 	}
 });
 {{end}}
