@@ -25,6 +25,7 @@ func viewErrorMessage(errorMessage string, w *bufio.Writer) {
 type htmlHandlerOptions struct {
 	form                   bool
 	dynamicElementsEnabled map[string]bool
+	bodyClass              string
 }
 
 func writeDynamicElementsScript(w http.ResponseWriter, dynamicElementsEnabled map[string]bool) {
@@ -145,7 +146,7 @@ window.collectedTasks = [];
 
 		io.WriteString(w, `</head>`)
 
-		io.WriteString(w, `<body class="bg-grey-lightest">`)
+		io.WriteString(w, `<body class="`+options.bodyClass+`">`)
 
 		if formErr != nil {
 			w.WriteHeader(400)

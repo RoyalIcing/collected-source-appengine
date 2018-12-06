@@ -12,6 +12,8 @@ import (
 
 // AddHTMLOrgsRoutes adds routes for organizations
 func AddHTMLOrgsRoutes(r *mux.Router) {
+	r.Path("/org").Methods("POST").
+		HandlerFunc(WithHTMLTemplate(WithViewer(createOrgHTMLHandle), htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}").Methods("GET").
 		HandlerFunc(WithHTMLTemplate(WithViewer(showOrgHTMLHandle), htmlHandlerOptions{}))
 	r.Path("/org:{orgSlug}/channels").Methods("POST").
@@ -69,7 +71,21 @@ func showOrgHTMLHandle(ctx context.Context, v *Viewer, w http.ResponseWriter, r 
 			sw.WriteString(`</div>`)
 		})
 	})
+}
 
+func createOrgHTMLHandle(ctx context.Context, v *Viewer, w http.ResponseWriter, r *http.Request) {
+	orgSlug := r.PostFormValue("orgSlug")
+	orgRepo := NewOrgRepo(ctx, orgSlug)
+
+	org, err := orgRepo.CreateOrg()
+	if err != nil {
+		v.SetAlert(err.Error())
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	vm := OrgViewModel{OrgSlug: org.Slug}
+	http.Redirect(w, r, vm.HTMLURL(), http.StatusFound)
 }
 
 func createChannelInOrgHTMLHandle(ctx context.Context, v *Viewer, w http.ResponseWriter, r *http.Request) {
@@ -85,5 +101,5 @@ func createChannelInOrgHTMLHandle(ctx context.Context, v *Viewer, w http.Respons
 		v.SetAlert(err.Error())
 	}
 
-	http.Redirect(w, r, orgViewModel.HTMLURL(), http.StatusMovedPermanently)
+	http.Redirect(w, r, orgViewModel.HTMLURL(), http.StatusFound)
 }
