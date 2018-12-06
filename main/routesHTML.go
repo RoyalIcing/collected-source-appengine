@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -103,27 +104,31 @@ app.register('developer', class extends Stimulus.Controller {
 	t.Execute(w, dynamicElementsEnabled)
 }
 
-func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.HandlerFunc {
+// WithHTMLHeaders adds HTTP headers
+func WithHTMLHeaders(f http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := w.Header()
 		header.Set("Content-Type", "text/html; charset=utf-8")
 		header.Set("X-Content-Type-Options", "nosniff")
 
-		var formErr error
-		if options.form {
-			formErr = r.ParseForm()
-		}
+		f(w, r)
+	})
+}
 
-		io.WriteString(w, `<!doctype html>
+func htmlHeadStart(w io.Writer) {
+	io.WriteString(w, `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 `)
 
-		io.WriteString(w, assetsHeadHTML)
+	io.WriteString(w, assetsHeadHTML)
 
-		io.WriteString(w, `
+}
+
+func htmlHeadEndBodyStart(w io.Writer, options struct{ bodyClass string }) {
+	io.WriteString(w, `
 <style>
 .grid-1\/3-2\/3 {
 	display: grid;
@@ -138,15 +143,36 @@ func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.Handl
 </style>
 `)
 
-		io.WriteString(w, `
+	io.WriteString(w, `
 <script>
 window.collectedTasks = [];
 </script>
 `)
 
-		io.WriteString(w, `</head>`)
+	io.WriteString(w, `</head>`)
 
-		io.WriteString(w, `<body class="`+options.bodyClass+`">`)
+	io.WriteString(w, `<body class="`+options.bodyClass+`">`)
+}
+
+func htmlBodyEnd(w io.Writer) {
+	io.WriteString(w, assetsBeforeBodyCloseHTML)
+	io.WriteString(w, "</body></html>")
+}
+
+func WithHTMLTemplate(f http.HandlerFunc, options htmlHandlerOptions) http.HandlerFunc {
+	return WithHTMLHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := w.Header()
+		header.Set("Content-Type", "text/html; charset=utf-8")
+		header.Set("X-Content-Type-Options", "nosniff")
+
+		var formErr error
+		if options.form {
+			formErr = r.ParseForm()
+		}
+
+		htmlHeadStart(w)
+		io.WriteString(w, "<title>Collected</title>")
+		htmlHeadEndBodyStart(w, struct{ bodyClass string }{bodyClass: ""})
 
 		if formErr != nil {
 			w.WriteHeader(400)
@@ -157,9 +183,81 @@ window.collectedTasks = [];
 
 		writeDynamicElementsScript(w, options.dynamicElementsEnabled)
 
-		io.WriteString(w, assetsBeforeBodyCloseHTML)
-		io.WriteString(w, "</body></html>")
+		htmlBodyEnd(w)
+	}))
+}
+
+// ViewModel is the base view model
+type ViewModel struct {
+	Title string
+}
+
+type viewSectionWriter struct {
+	w            *bufio.Writer
+	outerTagName string
+	outerClasses []string
+	innerClasses []string
+}
+
+func (section *viewSectionWriter) class(class string) *viewSectionWriter {
+	section.outerClasses = append(section.outerClasses, class)
+	return section
+}
+
+func (section *viewSectionWriter) innerClass(class string) *viewSectionWriter {
+	section.innerClasses = append(section.innerClasses, class)
+	return section
+}
+
+func (section *viewSectionWriter) innerSlim() *viewSectionWriter {
+	return section.innerClass("max-w-md mx-auto")
+}
+
+func (section *viewSectionWriter) write(f func(w io.Writer)) {
+	section.w.WriteString(`<` + section.outerTagName + ` class="` + strings.Join(section.outerClasses, " ") + `">`)
+	section.w.WriteString(`<div class="` + strings.Join(section.innerClasses, " ") + `">`)
+	f(section.w)
+	section.w.WriteString("</div>")
+	section.w.WriteString(`</` + section.outerTagName + `>`)
+}
+
+func (section *viewSectionWriter) writeHTMLString(html string) {
+	section.write(func(w io.Writer) {
+		io.WriteString(w, html)
 	})
+}
+
+func (section *viewSectionWriter) writeTemplate(source string, data interface{}) {
+	t := template.Must(template.New("section").Parse(source))
+
+	section.write(func(w io.Writer) {
+		t.Execute(section.w, data)
+	})
+}
+
+// ViewPage renders a naked HTML page with provided main content
+func (vm ViewModel) ViewPage(w io.Writer, viewHeader func(addSection func(outerTagName string) *viewSectionWriter), viewMainContent func(addSection func(outerTagName string) *viewSectionWriter)) {
+	bw := bufio.NewWriter(w)
+	defer bw.Flush()
+
+	htmlHeadStart(bw)
+	io.WriteString(bw, "<title>"+template.HTMLEscapeString(vm.Title)+"</title>")
+	htmlHeadEndBodyStart(bw, struct{ bodyClass string }{bodyClass: ""})
+
+	addSection := func(outerTagName string) *viewSectionWriter {
+		return &viewSectionWriter{
+			w:            bw,
+			outerTagName: outerTagName,
+		}
+	}
+
+	viewHeader(addSection)
+
+	bw.WriteString(`<main>`)
+	viewMainContent(addSection)
+	bw.WriteString(`</main>`)
+
+	htmlBodyEnd(bw)
 }
 
 // OrgViewModel models viewing an org
