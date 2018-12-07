@@ -15,6 +15,67 @@ func AddHTMLDashboardRoutes(r *mux.Router) {
 		HandlerFunc(WithHTMLHeaders(WithViewer(showDashboardHTMLHandle)))
 }
 
+func showDashboardHTMLAction(ctx context.Context, v *Viewer, w http.ResponseWriter, r *http.Request) *ViewModel {
+	return &ViewModel{
+		Title: "Collected",
+	}
+}
+
+func showDashboardHTMLViewHeader(v *Viewer, vm *ViewModel, addSection func(outerTagName string) *viewSectionWriter) {
+	addSection("header").
+		class("mt-8 mb-8").
+		innerSlim().
+		innerClass("flex flex-row justify-between").
+		writeTemplate(`
+{{define "content"}}
+<a href="{{ .URL }}" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-darker rounded shadow no-underline hover:bg-purple hover:border-purple-dark">{{ .Title }}</a>
+{{end}}
+<div class="text-2xl font-bold">Collected</div>
+<div>
+	{{if .GetGitHubClient}}
+	<article class="px-4 py-3 bg-white border border-grey-lighter rounded">
+	<p class="text-lg">Signed into GitHub</p>
+	</article>
+	{{else}}
+	<a href="/signin/github" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-darker rounded shadow no-underline hover:bg-purple hover:border-purple-dark">Sign in with GitHub</a>
+	{{end}}
+</div>
+`, v)
+}
+
+func showDashboardHTMLViewMain(v *Viewer, vm *ViewModel, addSection func(outerTagName string) *viewSectionWriter) {
+	addSection("section").
+		innerSlim().
+		writeHTMLString(`
+<h1 class="mb-4">Share your team’s news with the rest of your organization.</h1>
+<ul class="text-lg leading-normal">
+	<li>Collaborate with your organization’s different teams.</li>
+	<li>Write privately for your team.</li>
+	<li>Curate &amp; refine and then share with your organization.</li>
+	<li>Use the same tools to publish to the world.</li>
+	<li>Use Markdown, images, GraphQL.</li>
+</ul>
+`)
+
+	addSection("div").
+		innerClass("mt-16 border-b border-purple").
+		writeHTMLString("")
+
+	addSection("section").
+		class("mt-16").
+		innerSlim().
+		writeHTMLString(`
+<form method="post" action="/org" class="my-4">
+	<h2 class="text-purple-dark">Create your team</h2>
+	<label class="block my-2">
+		<span class="font-bold">Team name</span>
+		<input name="orgSlug" class="block w-full mt-1 p-2 bg-grey-lightest border border-grey rounded shadow-inner">
+	</label>
+	<button type="submit" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-darker rounded shadow">Create Team</button>
+</form>
+`)
+}
+
 func showDashboardHTMLHandle(ctx context.Context, v *Viewer, w http.ResponseWriter, r *http.Request) {
 	vm := ViewModel{
 		Title: "Collected",
@@ -30,11 +91,11 @@ func showDashboardHTMLHandle(ctx context.Context, v *Viewer, w http.ResponseWrit
 <div class="text-2xl font-bold">Collected</div>
 <div>
 	{{if .GetGitHubClient}}
-	<article class="px-4 py-3 bg-white border border-grey-lighter rounded">
-	<p class="text-lg">Signed into GitHub</p>
-	</article>
+		<article class="px-4 py-3 bg-white border border-grey-lighter rounded">
+			<p class="text-lg">Signed into GitHub</p>
+		</article>
 	{{else}}
-	<a href="/signin/github" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-darker rounded shadow no-underline hover:bg-purple hover:border-purple-dark">Sign in with GitHub</a>
+		{{props | setURL "/signin/github" | setText "Sign in with GitHub" | setColor "purple" | buttonLink }}
 	{{end}}
 </div>
 `, v)
@@ -60,16 +121,13 @@ func showDashboardHTMLHandle(ctx context.Context, v *Viewer, w http.ResponseWrit
 			addSection("section").
 				class("mt-16").
 				innerSlim().
-				writeHTMLString(`
+				writeTemplate(`
 <form method="post" action="/org" class="my-4">
 	<h2 class="text-purple-dark">Create your team</h2>
-	<label class="block my-2">
-		<span class="font-bold">Team name</span>
-		<input name="orgSlug" class="block w-full mt-1 p-2 bg-grey-lightest border border-grey rounded shadow-inner">
-	</label>
-	<button type="submit" class="mt-2 px-4 py-2 font-bold text-white bg-purple-dark border border-purple-darker rounded shadow">Create Team</button>
+	{{props | setInputFormName "orgSlug" | setLabel "Team name" | fieldWithLabel }}
+	{{props | setIsSubmit | setText "Create Team" | setColor "purple" | button }}
 </form>
-`)
+`, nil)
 		},
 	)
 }

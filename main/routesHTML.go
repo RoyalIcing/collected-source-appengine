@@ -228,7 +228,77 @@ func (section *viewSectionWriter) writeHTMLString(html string) {
 }
 
 func (section *viewSectionWriter) writeTemplate(source string, data interface{}) {
-	t := template.Must(template.New("section").Parse(source))
+	t := template.New("section")
+
+	t = t.Funcs(template.FuncMap{
+		"props": func() map[string]interface{} {
+			return make(map[string]interface{})
+		},
+		"setURL": func(url string, props map[string]interface{}) map[string]interface{} {
+			props["URL"] = url
+			return props
+		},
+		"setText": func(text string, props map[string]interface{}) map[string]interface{} {
+			props["Text"] = text
+			return props
+		},
+		"setColor": func(colorName string, props map[string]interface{}) map[string]interface{} {
+			props["Color"] = colorName
+			return props
+		},
+		"setIsSubmit": func(props map[string]interface{}) map[string]interface{} {
+			props["ButtonType"] = "submit"
+			return props
+		},
+		"button": func(props map[string]interface{}) template.HTML {
+			color, ok := props["Color"].(string)
+			if !ok {
+				color = "blue"
+			}
+			text := props["Text"].(string)
+			buttonType, ok := props["ButtonType"].(string)
+			if !ok {
+				buttonType = "button"
+			}
+
+			return template.HTML(`
+<button type="` + buttonType + `" class="mt-2 px-4 py-2 font-bold text-white bg-` + color + `-dark border border-` + color + `-darker rounded shadow no-underline hover:bg-` + color + ` hover:border-` + color + `-dark">` + text + `</button>
+`)
+		},
+		"buttonLink": func(props map[string]interface{}) template.HTML {
+			url := props["URL"].(string)
+			color, ok := props["Color"].(string)
+			if !ok {
+				color = "blue"
+			}
+			text := props["Text"].(string)
+
+			return template.HTML(`
+<a href="` + url + `" class="mt-2 px-4 py-2 font-bold text-white bg-` + color + `-dark border border-` + color + `-darker rounded shadow no-underline hover:bg-` + color + ` hover:border-` + color + `-dark">` + text + `</a>
+`)
+		},
+		"setInputFormName": func(name string, props map[string]interface{}) map[string]interface{} {
+			props["InputFormName"] = name
+			return props
+		},
+		"setLabel": func(label string, props map[string]interface{}) map[string]interface{} {
+			props["Label"] = label
+			return props
+		},
+		"fieldWithLabel": func(props map[string]interface{}) template.HTML {
+			inputFormName := props["InputFormName"].(string)
+			label := props["Label"].(string)
+
+			return template.HTML(`
+<label class="block my-2">
+	<span class="font-bold">` + label + `</span>
+	<input name="` + inputFormName + `" class="block w-full mt-1 p-2 bg-grey-lightest border border-grey rounded shadow-inner">
+</label>
+`)
+		},
+	})
+
+	t = template.Must(t.Parse(source))
 
 	section.write(func(w io.Writer) {
 		t.Execute(section.w, data)
