@@ -17,3 +17,5 @@ app.*.yaml
 .cache
 
 main/public
+
+credentials/

@@ -7,7 +7,7 @@ dev_reset:
 	dev_appserver.py --support_datastore_emulator=true --clear_datastore=yes app.yaml
 
 deploy:
-	gcloud datastore indexes create index.yaml && \
+	gcloud datastore indexes create index.yaml
 	gcloud app deploy app.prod.yaml --project "${PROJECT}"
 
 deploy2:

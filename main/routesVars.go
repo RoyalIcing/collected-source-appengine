@@ -35,3 +35,7 @@ func (v RouteVars) optionalPostID() *string {
 	}
 	return nil
 }
+
+func (v RouteVars) sha256() string {
+	return v.vars["sha256"]
+}

@@ -94,6 +94,7 @@ func main() {
 
 	AddAPIOrgsRoutes(r)
 	AddAPIPostsRoutes(r)
+	AddAPIStorageRoutes(r)
 
 	http.HandleFunc("/auth/status", AuthStatusHandle)
 
